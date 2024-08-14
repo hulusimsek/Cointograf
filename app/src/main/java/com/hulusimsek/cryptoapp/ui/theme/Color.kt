@@ -11,6 +11,6 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 val RichBlack = Color(0xFF050505)
-val BlueMunsell = Color(0xFF0B7B8A)
+val BlueMunsell = Color(0xFF009AAF)
 val Bone = Color(0xFFDDDBCB)
 val Alabaster = Color(0xFFE9F5F2)

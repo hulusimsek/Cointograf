@@ -33,10 +33,10 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavHost(navController = navController, startDestination = "crypto_list_screen") {
                         composable("crypto_list_screen") {
-                            CryptoListScreen(navController)
+                            CryptoListScreen(navController, modifier = Modifier.padding(innerPadding))
                         }
 
-                        composable("cryoto_detail_screen/{cryptoId}/{cryptoPrice}", arguments = listOf(
+                        composable("crypto_detail_screen/{cryptoId}/{cryptoPrice}", arguments = listOf(
                             navArgument("cryptoId") {type = NavType.StringType},
                             navArgument("cryptoPrice") {type = NavType.StringType}
 

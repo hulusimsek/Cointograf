@@ -73,14 +73,13 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.1.0-alpha09")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
 
 
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
 
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.1.0-alpha14")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation ("androidx.navigation:navigation-compose:2.7.7")
@@ -107,17 +106,19 @@ dependencies {
     implementation ("io.coil-kt:coil-compose:1.3.2")
 
     //Dagger - Hilt
-    implementation ("com.google.dagger:hilt-android:2.44")
-    kapt ("com.google.dagger:hilt-android-compiler:2.44")
-    kapt ("androidx.hilt:hilt-compiler:1.0.0")
-    implementation ("androidx.hilt:hilt-navigation-compose:1.0.0")
-    implementation ("androidx.hilt:hilt-work:1.0.0")
-    implementation ("androidx.work:work-runtime-ktx:2.8.1")
+    implementation ("com.google.dagger:hilt-android:2.48")
+    kapt ("com.google.dagger:hilt-android-compiler:2.48")
+    kapt ("androidx.hilt:hilt-compiler:1.2.0")
+    implementation ("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation ("androidx.hilt:hilt-work:1.2.0")
+    implementation ("androidx.work:work-runtime-ktx:2.9.1")
 
 
     val nav_version = "2.7.7"
 
     implementation("androidx.navigation:navigation-compose:$nav_version")
+
+    implementation("androidx.compose.material:material-icons-extended:1.5.0")
 
 
 }

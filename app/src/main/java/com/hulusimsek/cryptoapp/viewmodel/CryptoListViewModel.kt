@@ -1,8 +1,13 @@
 package com.hulusimsek.cryptoapp.viewmodel
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import com.hulusimsek.cryptoapp.entity.SearchQuery
 import com.hulusimsek.cryptoapp.model.CryptoListItem
 import com.hulusimsek.cryptoapp.repository.CryptoRepository
 import com.hulusimsek.cryptoapp.repository.CryptoRepositoryInterface
@@ -25,8 +30,13 @@ class CryptoListViewModel @Inject constructor(
     private var isSearchStarting = true
 
 
+
+    var searchQueryList = mutableStateOf<List<SearchQuery>>(listOf())
+
+
     init {
         loadCrpyots()
+        loadSearchQueries()
     }
 
     fun loadCrpyots() {
@@ -59,30 +69,54 @@ class CryptoListViewModel @Inject constructor(
 
 
     fun searchCryptoList(query: String) {
-        val listToSearch = if(isSearchStarting) {
-            cryptoList.value
-        } else {
-            initialCryptoList
-        }
-
-        viewModelScope.launch (Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.Default) {
+            // Eğer arama terimi boşsa, orijinal listeyi geri yükleyelim
             if (query.isEmpty()) {
                 cryptoList.value = initialCryptoList
                 isSearchStarting = true
                 return@launch
             }
 
-            val  result = listToSearch.filter {
-                it.symbol.contains(query.trim(), ignoreCase = true)
-            }
-            if (isSearchStarting){
-                initialCryptoList = cryptoList.value
+            // İlk arama sırasında orijinal listeyi yedekleyelim
+            if (isSearchStarting) {
+                initialCryptoList = cryptoList.value.toList()
                 isSearchStarting = false
+                Log.e("CryptoViewModel", "Initial list saved: ${initialCryptoList.size} items")
             }
 
+            // Arama sonuçlarını filtreleyelim
+            val result = initialCryptoList.filter {
+                it.symbol.contains(query.trim(), ignoreCase = true)
+            }
+            Log.e("CryptoViewModel", "Search query: $query, Result: ${result.size} items")
+
+            // Filtrelenmiş sonuçları listeye atayalım
             cryptoList.value = result
         }
     }
+
+
+    fun saveSearchQuery(query: String) {
+        viewModelScope.launch {
+            repository.insertSearchQuery(SearchQuery(query = query))
+            loadSearchQueries() // Reload search queries after saving
+        }
+    }
+
+    fun deleteSearchQuery(query: SearchQuery) {
+        viewModelScope.launch {
+            repository.deleteSearchQuery(query)
+            loadSearchQueries() // Silme işleminden sonra geçmiş sorguları yeniden yükleyin.
+        }
+    }
+
+    // Function to load search queries from the repository
+    private fun loadSearchQueries() {
+        viewModelScope.launch {
+            searchQueryList.value = repository.getSearchQuery()
+        }
+    }
+
 
 
 }
