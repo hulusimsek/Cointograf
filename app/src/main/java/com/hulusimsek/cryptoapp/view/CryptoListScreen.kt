@@ -62,11 +62,16 @@ import androidx.compose.foundation.lazy.items
 
 import androidx.compose.runtime.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ModifierInfo
+import androidx.compose.ui.res.colorResource
 import androidx.work.ListenableWorker.Result.Retry
 import com.hulusimsek.cryptoapp.entity.SearchQuery
 import com.hulusimsek.cryptoapp.model.CryptoListItem
@@ -119,6 +124,9 @@ fun CryptoListScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+
             // Listeyi yalnızca SearchBar genişletilmediğinde göster
 
                 LazyColumn(contentPadding = PaddingValues(5.dp)) {
@@ -129,7 +137,7 @@ fun CryptoListScreen(
 
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (isLoading) {
-                        CircularProgressIndicator(color = BlueMunsell)
+                        CircularProgressIndicator(color = colorResource(id = R.color.color1))
                     }
                     if (errorMessage.isNotEmpty()) {
                         RetryView(error = errorMessage) {
@@ -153,11 +161,15 @@ fun SearchBar(
     ) {
     var text by remember { mutableStateOf("") }
     var isActive by remember { mutableStateOf(false) }
+    val cryptoList by remember { viewModel.cryptoList }
 
     androidx.compose.material3.SearchBar(
         modifier = modifier,
         query = text,
-        onQueryChange = { text = it },
+        onQueryChange = {
+            text = it
+            onSearchQuery(it) // Her harfe basıldığında arama yap
+        },
         onSearch = {
             if(it.isNotEmpty()) {
                 onSearchQuery(text) // Search fonksiyonunu çağır
@@ -217,9 +229,10 @@ fun SearchBar(
                                 .padding(end = 14.dp)
                                 .clickable {
                                     text = item.query // Text alanını güncelle
+                                    viewModel.saveSearchQuery(item.query)
                                     onSearchQuery(item.query)
                                     isActive = false
-                    }
+                                }
                         )
                         Icon(
                             painter = painterResource(id = R.drawable.baseline_close_24),
@@ -227,6 +240,37 @@ fun SearchBar(
                             modifier = Modifier.clickable {
                                 viewModel.deleteSearchQuery(query = item)
                             }
+                        )
+                    }
+                }
+            }
+        }
+        else {
+            LazyColumn {
+                items(cryptoList) { item ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically, // Yatay hizalamayı sağlar
+                        horizontalArrangement = Arrangement.SpaceBetween // Öğeler arasındaki boşluğu ayarlar
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "history icon",
+                            modifier = Modifier.padding(end = 14.dp)
+                        )
+                        Text(
+                            text = item.symbol,
+                            modifier = Modifier
+                                .weight(1f) // Yüksekliğin aynı hizada kalmasını sağlar
+                                .padding(end = 14.dp)
+                                .clickable {
+                                    text = item.symbol // Text alanını güncelle
+                                    viewModel.saveSearchQuery(item.symbol)
+                                    onSearchQuery(item.symbol)
+                                    isActive = false
+                                }
                         )
                     }
                 }
@@ -260,39 +304,59 @@ fun CryptoList(navController: NavController, viewModel: CryptoListViewModel = hi
     }
 }
 @Composable
-fun CryptoListView(cryptos : List<CryptoListItem>, navController: NavController) {
-    LazyColumn(contentPadding = PaddingValues(5.dp)) {
-        items(cryptos){
-            CryptoRow(navController = navController, crypto = it)
+fun CryptoListView(cryptos: List<CryptoListItem>, navController: NavController) {
+    LazyColumn(contentPadding = PaddingValues(10.dp)) {
+        items(cryptos) { crypto ->
+            CryptoRow(navController = navController, crypto = crypto)
         }
     }
 }
 
 @Composable
 fun CryptoRow(navController: NavController, crypto: CryptoListItem) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .background(color = Alabaster)
-        .clickable {
-            navController.navigate(
-                "crypto_detail_screen/${crypto.symbol}/${crypto.price}"
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp, horizontal = 16.dp)
+            .clickable {
+                navController.navigate("crypto_detail_screen/${crypto.symbol}/${crypto.price}")
+            },
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = crypto.symbol,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = crypto.price,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Navigate to details",
+                tint = MaterialTheme.colorScheme.primary
             )
-        }) {
-        Text(
-            text = crypto.symbol,
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(2.dp),
-            fontWeight = FontWeight.Bold,
-            color = Bone
-        )
-        Text(
-            text = crypto.price,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(2.dp),
-            color = Color.Black
-        )
+        }
     }
 }
+
 
 @Composable
 fun RetryView(

@@ -98,6 +98,8 @@ class CryptoListViewModel @Inject constructor(
 
     fun saveSearchQuery(query: String) {
         viewModelScope.launch {
+            repository.deleteSearchQueryByQuery(query)
+
             repository.insertSearchQuery(SearchQuery(query = query))
             loadSearchQueries() // Reload search queries after saving
         }

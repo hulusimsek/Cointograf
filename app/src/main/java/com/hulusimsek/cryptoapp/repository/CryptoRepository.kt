@@ -21,6 +21,11 @@ class CryptoRepository @Inject constructor(
         cryptoDao.deleteQuery(searchQuery)
     }
 
+    override suspend fun deleteSearchQueryByQuery(query: String) {
+        cryptoDao.deleteSearchQueryByQuery(query)
+
+    }
+
     override suspend fun getSearchQuery(): List<SearchQuery> {
         return cryptoDao.getAllQueries()
     }
@@ -43,4 +48,6 @@ class CryptoRepository @Inject constructor(
         }
         return Resource.Success(response)
     }
+
+
 }

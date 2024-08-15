@@ -16,6 +16,8 @@ interface CryptoRepositoryInterface {
 
     suspend fun deleteSearchQuery(searchQuery: SearchQuery)
 
+    suspend fun deleteSearchQueryByQuery(query: String)
+
     suspend fun getSearchQuery(): List<SearchQuery>
 
     suspend fun getCryptoList() : Resource<CryptoList>

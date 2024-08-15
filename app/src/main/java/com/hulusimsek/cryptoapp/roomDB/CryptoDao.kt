@@ -17,4 +17,7 @@ interface CryptoDao {
 
     @Query("SELECT * FROM search_queries")
     suspend fun getAllQueries(): List<SearchQuery>
+
+    @Query("DELETE FROM search_queries WHERE query = :query")
+    suspend fun deleteSearchQueryByQuery(query: String)
 }
