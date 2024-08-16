@@ -11,5 +11,8 @@ interface CryptoAPI {
     suspend fun getCryptoList(): CryptoList
 
     @GET("api/v3/ticker/24hr")
+    suspend fun getCryptoList24hr(): CryptoList
+
+    @GET("api/v3/ticker/24hr")
     suspend fun getCrypto(@Query("symbol") symbol : String) : CryptoItem
 }

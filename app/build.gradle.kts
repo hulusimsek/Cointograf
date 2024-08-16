@@ -53,6 +53,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
 }
 
 dependencies {
@@ -120,5 +121,11 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended:1.5.0")
     implementation ("androidx.compose.material3:material3:1.2.1")
+    implementation ("androidx.compose.foundation:foundation:1.6.8")
+    implementation ("androidx.compose.ui:ui:1.6.8")
+
+
+    implementation("com.google.accompanist:accompanist-pager:0.30.0")
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.30.0")
 
 }

@@ -69,6 +69,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ModifierInfo
 import androidx.compose.ui.res.colorResource
@@ -79,6 +81,8 @@ import com.hulusimsek.cryptoapp.ui.theme.Alabaster
 import com.hulusimsek.cryptoapp.ui.theme.BlueMunsell
 import com.hulusimsek.cryptoapp.ui.theme.Bone
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CryptoListScreen(
     navController: NavController,
@@ -87,8 +91,11 @@ fun CryptoListScreen(
 ) {
     var isSearchBarExpanded by remember { mutableStateOf(false) }
     val cryptoList by remember { viewModel.cryptoList }
-    val isLoading by remember { viewModel.isLoading }
+    val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by remember { viewModel.errorMessage }
+
+
+
 
     Surface(color = MaterialTheme.colorScheme.secondary, modifier = modifier.fillMaxSize()) {
         Column {
@@ -288,9 +295,8 @@ fun CryptoList(navController: NavController, viewModel: CryptoListViewModel = hi
     val errorMessage by remember {
         viewModel.errorMessage
     }
-    val isLoading by remember {
-        viewModel.isLoading
-    }
+    val isLoading by viewModel.isLoading.collectAsState()
+
     CryptoListView(cryptos = cryptoList, navController = navController)
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if(isLoading){

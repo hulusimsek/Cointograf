@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hulusimsek.cryptoapp.entity.SearchQuery
 import com.hulusimsek.cryptoapp.model.CryptoListItem
 import com.hulusimsek.cryptoapp.repository.CryptoRepository
@@ -14,9 +15,12 @@ import com.hulusimsek.cryptoapp.repository.CryptoRepositoryInterface
 import com.hulusimsek.cryptoapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.http.Query
 import javax.inject.Inject
+import kotlinx.coroutines.flow.asStateFlow
 
 @HiltViewModel
 class CryptoListViewModel @Inject constructor(
@@ -24,10 +28,20 @@ class CryptoListViewModel @Inject constructor(
 ) : ViewModel() {
     var cryptoList = mutableStateOf<List<CryptoListItem>>(listOf())
     var errorMessage = mutableStateOf("")
-    var isLoading = mutableStateOf(false)
 
     private var initialCryptoList = listOf<CryptoListItem>()
     private var isSearchStarting = true
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            loadCrpyots()
+            _isLoading.value = false
+        }
+    }
 
 
 
@@ -42,7 +56,7 @@ class CryptoListViewModel @Inject constructor(
     fun loadCrpyots() {
 
         viewModelScope.launch {
-            isLoading.value = true
+            _isLoading.value = true
             val result = repository.getCryptoList()
 
             when(result) {
@@ -53,15 +67,15 @@ class CryptoListViewModel @Inject constructor(
 
                     cryptoList.value += cryptoItems
                     errorMessage.value = ""
-                    isLoading.value = false
+                    _isLoading.value = false
                 }
 
                 is Resource.Error -> {
                     errorMessage.value = result.message!!
-                    isLoading.value = false
+                    _isLoading.value = false
                 }
                 is Resource.Loading -> {
-                    isLoading.value = true
+                    _isLoading.value = true
                 }
             }
         }
