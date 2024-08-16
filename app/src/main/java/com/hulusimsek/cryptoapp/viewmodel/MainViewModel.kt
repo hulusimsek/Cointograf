@@ -17,10 +17,21 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repository: CryptoRepositoryInterface
 ) : ViewModel() {
-    private val _selectedTab = MutableStateFlow(0)
-    val selectedTab: StateFlow<Int> = _selectedTab
+    val pageCount = mutableStateOf(0) // Sayfa sayısını yönet
+    val currentPage = mutableStateOf(0) // Mevcut sayfayı yönet
 
-    fun onTabSelected(index: Int) {
-        _selectedTab.value = index
+    fun setPageCount(count: Int) {
+        pageCount.value = count
     }
+
+    fun setCurrentPage(page: Int) {
+        currentPage.value = page
+    }
+
+    fun goToPage(page: Int) {
+        if (page in 0 until pageCount.value) {
+            setCurrentPage(page)
+        }
+    }
+
 }

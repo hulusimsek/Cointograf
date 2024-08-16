@@ -1,6 +1,6 @@
 package com.hulusimsek.cryptoapp
 
-import BottomNavigationBar
+import BottomNavSwipeScreen
 import CryptoDetailScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     bottomBar = {
-                        BottomNavigationBar(mainViewModel = mainViewModel, navController = navController)
+                        BottomNavSwipeScreen(viewModel = mainViewModel, navController = navController)
                     }
                 ) { innerPadding ->
                     NavHost(navController = navController, startDestination = "crypto_list_screen", Modifier.padding(innerPadding)) {
