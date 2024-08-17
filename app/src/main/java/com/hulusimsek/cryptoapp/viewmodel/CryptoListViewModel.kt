@@ -34,6 +34,9 @@ class CryptoListViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow("")
     val errorMessage: StateFlow<String> = _errorMessage
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -52,7 +55,13 @@ class CryptoListViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             loadCrpyots()
-            println("güncellendi")
+            // Arama sorgusu varsa, arama işlemi yap
+            if (_searchQuery.value.isNotEmpty()) {
+                searchCryptoList(_searchQuery.value)
+            } else {
+                // Arama sorgusu boşsa, listeyi başlat
+                _cryptoList.value = initialCryptoList
+            }
             _isLoading.value = false
         }
     }
@@ -64,12 +73,19 @@ class CryptoListViewModel @Inject constructor(
 
             when (result) {
                 is Resource.Success -> {
-                    _cryptoList.value = listOf()
                     val cryptoItems = result.data!!.mapIndexed { index, item ->
                         CryptoListItem(item.symbol, item.price)
                     }
 
-                    _cryptoList.value = cryptoItems
+                    // Arama başlamışsa, listeyi güncelle
+                    if (isSearchStarting) {
+                        initialCryptoList = cryptoItems
+                        _cryptoList.value = initialCryptoList
+                        isSearchStarting = false
+                    } else {
+                        _cryptoList.value = applySearchFilter(cryptoItems)
+                    }
+
                     _errorMessage.value = ""
                     _isLoading.value = false
                 }
@@ -84,26 +100,35 @@ class CryptoListViewModel @Inject constructor(
         }
     }
 
+    private fun applySearchFilter(cryptoItems: List<CryptoListItem>): List<CryptoListItem> {
+        val currentQuery = _searchQuery.value
+        return if (currentQuery.isEmpty()) {
+            cryptoItems
+        } else {
+            cryptoItems.filter { it.symbol.contains(currentQuery.trim(), ignoreCase = true) }
+        }
+    }
+
     fun searchCryptoList(query: String) {
         viewModelScope.launch(Dispatchers.Default) {
+            _searchQuery.value = query
             if (query.isEmpty()) {
                 _cryptoList.value = initialCryptoList
                 isSearchStarting = true
-                return@launch
+            } else {
+                if (isSearchStarting) {
+                    initialCryptoList = _cryptoList.value.toList()
+                    isSearchStarting = false
+                }
+
+                val result = initialCryptoList.filter {
+                    it.symbol.contains(query.trim(), ignoreCase = true)
+                }
+                _cryptoList.value = result
             }
 
-            if (isSearchStarting) {
-                initialCryptoList = _cryptoList.value.toList()
-                isSearchStarting = false
-                Log.e("CryptoViewModel", "Initial list saved: ${initialCryptoList.size} items")
-            }
-
-            val result = initialCryptoList.filter {
-                it.symbol.contains(query.trim(), ignoreCase = true)
-            }
-            Log.e("CryptoViewModel", "Search query: $query, Result: ${result.size} items")
-
-            _cryptoList.value = result
+            // Arama sorgusunu kaydet
+            saveSearchQuery(query)
         }
     }
 

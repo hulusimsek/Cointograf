@@ -209,6 +209,7 @@ fun SearchBar(
                     modifier = Modifier.clickable {
                         if (text.isNotEmpty()) {
                             text = ""
+                            onSearchQuery("")
                         } else {
                             isActive = false
                             // Close butonuna tıklanınca odaklanmayı kapat

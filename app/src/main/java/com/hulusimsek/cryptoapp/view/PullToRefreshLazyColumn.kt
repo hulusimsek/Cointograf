@@ -25,42 +25,30 @@ fun PullToRefreshPage(
     content: @Composable (Modifier) -> Unit
 ) {
     // Pull-to-refresh durumu
-    val pullToRefreshState = rememberPullToRefreshState(
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .nestedScroll(pullToRefreshState.nestedScrollConnection)
-    ) {
-        // İçerik için modifiyer
-        val contentModifier = Modifier
-            .fillMaxSize()
-
-        // İçeriği göster
-        content(contentModifier)
-
-        if(pullToRefreshState.isRefreshing) {
-            LaunchedEffect(true) {
-                onRefresh()
-            }
+    val pullToRefreshState = rememberPullToRefreshState()
+    val contentModifier = Modifier
+        .fillMaxSize()
+    if (pullToRefreshState.isRefreshing) {
+        LaunchedEffect(true) {
+            // fetch something
+            onRefresh()
+            pullToRefreshState.endRefresh()
         }
-
-        LaunchedEffect(isRefreshing) {
-            if(isRefreshing) {
-                pullToRefreshState.startRefresh()
-            } else {
-                pullToRefreshState.endRefresh()
-            }
-        }
-
-
-        // Pull to Refresh Container
-        PullToRefreshContainer(
-            state = pullToRefreshState,
-            modifier = Modifier
-                .fillMaxSize()
-                .align(Alignment.TopCenter) // Sayfanın üst kısmında konumlandır
-        )
     }
+    // İçeriği göster
+
+    // İçeriği güncellemek için LaunchedEffect kullanıyoruz
+    Box(Modifier.nestedScroll(pullToRefreshState.nestedScrollConnection)) {
+        content(contentModifier)
+        PullToRefreshContainer(state = pullToRefreshState, modifier = Modifier.align(Alignment.TopCenter))
+
+//    or
+
+//    if (state.isRefreshing) {
+//        LinearProgressIndicator()
+//    } else {
+//        LinearProgressIndicator(progress = { state.progress })
+//    }
+    }
+
 }
