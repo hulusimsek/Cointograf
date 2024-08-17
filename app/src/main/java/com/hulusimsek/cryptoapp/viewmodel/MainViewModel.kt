@@ -19,7 +19,7 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repository: CryptoRepositoryInterface
 ) : ViewModel() {
-    private val _pageCount = MutableStateFlow(5) // Sayfa sayısını yönet
+    private val _pageCount = MutableStateFlow(3) // Sayfa sayısını yönet
     val pageCount: StateFlow<Int> get() = _pageCount
 
     private val _currentPage = MutableStateFlow(0) // Mevcut sayfayı yönet

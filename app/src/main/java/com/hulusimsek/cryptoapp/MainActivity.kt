@@ -1,6 +1,5 @@
 package com.hulusimsek.cryptoapp
 
-import BottomNavSwipeScreen
 import CryptoDetailScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity

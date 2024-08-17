@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -50,7 +51,14 @@ fun PagerWithNavHost(
     viewModel: MainViewModel = hiltViewModel()// ViewModel'inizi burada tanımlayın
 ) {
     val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { 3 }) // Sayfa sayısı
+    val pageCount by viewModel.pageCount.collectAsState()
+    val pagerState = rememberPagerState(pageCount = {pageCount})
+    val currentPage by viewModel.currentPage.collectAsState()
+
+    // Sayfa değişikliklerini izleyin
+    LaunchedEffect(currentPage) {
+        pagerState.animateScrollToPage(currentPage)
+    }
 
     Scaffold(
         bottomBar = {
@@ -61,8 +69,9 @@ fun PagerWithNavHost(
                 // Sayfa 0 için BottomNavigationItem
                 BottomNavigationItem(
                     icon = { Icon(Icons.Filled.Home, "Page 0") },
-                    selected = pagerState.currentPage == 0,
+                    selected = currentPage == 0,
                     onClick = {
+                        viewModel.goToPage(0)
                         scope.launch {
                             pagerState.animateScrollToPage(0)
                         }
@@ -75,8 +84,9 @@ fun PagerWithNavHost(
                 // Sayfa 1 için BottomNavigationItem
                 BottomNavigationItem(
                     icon = { Icon(Icons.Filled.Search, "Page 1") },
-                    selected = pagerState.currentPage == 1,
+                    selected = currentPage == 1,
                     onClick = {
+                        viewModel.goToPage(1)
                         scope.launch {
                             pagerState.animateScrollToPage(1)
                         }
@@ -89,8 +99,9 @@ fun PagerWithNavHost(
                 // Sayfa 2 için BottomNavigationItem
                 BottomNavigationItem(
                     icon = { Icon(Icons.Filled.Favorite, "Page 2") },
-                    selected = pagerState.currentPage == 2,
+                    selected = currentPage == 2,
                     onClick = {
+                        viewModel.goToPage(2)
                         scope.launch {
                             pagerState.animateScrollToPage(2)
                         }
@@ -121,31 +132,26 @@ fun PagerWithNavHost(
                         CryptoDetailScreen(id = cryptoId, navController = navController)
                     }
                 }
+                /*
                 1 -> NavHost(
                     navController = navController,
-                    startDestination = "crypto_list_screen"
+                    startDestination = "another_screen"
                 ) {
-                    composable("crypto_list_screen") {
-                        CryptoListScreen(navController = navController)
-                    }
-                    composable("crypto_detail_screen/{cryptoId}") { backStackEntry ->
-                        val cryptoId = backStackEntry.arguments?.getString("cryptoId") ?: ""
-                        CryptoDetailScreen(id = cryptoId, navController = navController)
+                    composable("another_screen") {
+                        AnotherScreen()
                     }
                 }
+                2 -> NavHost(
+                    navController = navController,
+                    startDestination = "yet_another_screen"
+                ) {
+                    composable("yet_another_screen") {
+                        YetAnotherScreen()
+                    }
+                }
+
+                 */
             }
-        }
-    }
-}
-@Composable
-fun CryptoListScreenContent(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "crypto_list_screen") {
-        composable("crypto_list_screen") {
-            CryptoListScreen(navController = navController)
-        }
-        composable("crypto_detail_screen/{cryptoId}") { backStackEntry ->
-            val cryptoId = backStackEntry.arguments?.getString("cryptoId") ?: ""
-            CryptoDetailScreen(id = cryptoId, navController = navController)
         }
     }
 }
