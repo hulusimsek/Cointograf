@@ -17,7 +17,6 @@ import com.hulusimsek.cryptoapp.viewmodel.CryptoDetailViewModel
 @Composable
 fun CryptoDetailScreen(
     id: String,
-    price: String,
     navController: NavController,
     modifier: Modifier = Modifier,
     viewModel: CryptoDetailViewModel = hiltViewModel()

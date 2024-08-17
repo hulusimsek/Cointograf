@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.runtime.livedata)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -127,5 +128,8 @@ dependencies {
 
     implementation("com.google.accompanist:accompanist-pager:0.30.0")
     implementation("com.google.accompanist:accompanist-pager-indicators:0.30.0")
+    implementation ("com.github.skydoves:landscapist:1.4.5")
+    implementation ("androidx.compose.material:material:1.1.1")
+    implementation ("com.google.accompanist:accompanist-swiperefresh:0.24.13-rc")
 
 }

@@ -1,6 +1,8 @@
 package com.hulusimsek.cryptoapp.viewmodel
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hulusimsek.cryptoapp.entity.SearchQuery
@@ -17,15 +19,34 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repository: CryptoRepositoryInterface
 ) : ViewModel() {
-    val pageCount = mutableStateOf(0) // Sayfa sayısını yönet
-    val currentPage = mutableStateOf(0) // Mevcut sayfayı yönet
+    private val _pageCount = MutableStateFlow(5) // Sayfa sayısını yönet
+    val pageCount: StateFlow<Int> get() = _pageCount
+
+    private val _currentPage = MutableStateFlow(0) // Mevcut sayfayı yönet
+    val currentPage: StateFlow<Int> get() = _currentPage
+
+    private val _selectedCoinId = MutableStateFlow<String?>(null)
+    val selectedCoinId: StateFlow<String?> get() = _selectedCoinId
+
+    fun selectCoin(coinId: String) {
+        _selectedCoinId.value = coinId
+        // Sayfa geçişini yap
+        goToDetailPage()
+    }
+
+    private fun goToDetailPage() {
+        _currentPage.value = 1 // Detay sayfasının indexi (örneğin, 1)
+    }
+
+
+
 
     fun setPageCount(count: Int) {
-        pageCount.value = count
+        _pageCount.value = count
     }
 
     fun setCurrentPage(page: Int) {
-        currentPage.value = page
+        _currentPage.value = page
     }
 
     fun goToPage(page: Int) {

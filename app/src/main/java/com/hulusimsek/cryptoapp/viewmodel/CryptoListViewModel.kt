@@ -17,6 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.http.Query
 import javax.inject.Inject
@@ -26,52 +27,54 @@ import kotlinx.coroutines.flow.asStateFlow
 class CryptoListViewModel @Inject constructor(
     private val repository: CryptoRepositoryInterface
 ) : ViewModel() {
-    var cryptoList = mutableStateOf<List<CryptoListItem>>(listOf())
-    var errorMessage = mutableStateOf("")
+
+    private val _cryptoList = MutableStateFlow<List<CryptoListItem>>(listOf())
+    val cryptoList: StateFlow<List<CryptoListItem>> = _cryptoList
+
+    private val _errorMessage = MutableStateFlow("")
+    val errorMessage: StateFlow<String> = _errorMessage
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
 
     private var initialCryptoList = listOf<CryptoListItem>()
     private var isSearchStarting = true
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
-
-    fun refresh() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            loadCrpyots()
-            _isLoading.value = false
-        }
-    }
-
-
-
-    var searchQueryList = mutableStateOf<List<SearchQuery>>(listOf())
-
+    private val _searchQueryList = MutableStateFlow<List<SearchQuery>>(listOf())
+    val searchQueryList: StateFlow<List<SearchQuery>> = _searchQueryList
 
     init {
         loadCrpyots()
         loadSearchQueries()
     }
 
-    fun loadCrpyots() {
+    fun refresh() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            loadCrpyots()
+            println("güncellendi")
+            _isLoading.value = false
+        }
+    }
 
+    fun loadCrpyots() {
         viewModelScope.launch {
             _isLoading.value = true
             val result = repository.getCryptoList()
 
-            when(result) {
+            when (result) {
                 is Resource.Success -> {
+                    _cryptoList.value = listOf()
                     val cryptoItems = result.data!!.mapIndexed { index, item ->
-                        CryptoListItem(item.symbol,item.price)
-                    } as List<CryptoListItem>
+                        CryptoListItem(item.symbol, item.price)
+                    }
 
-                    cryptoList.value += cryptoItems
-                    errorMessage.value = ""
+                    _cryptoList.value = cryptoItems
+                    _errorMessage.value = ""
                     _isLoading.value = false
                 }
-
                 is Resource.Error -> {
-                    errorMessage.value = result.message!!
+                    _errorMessage.value = result.message!!
                     _isLoading.value = false
                 }
                 is Resource.Loading -> {
@@ -81,58 +84,47 @@ class CryptoListViewModel @Inject constructor(
         }
     }
 
-
     fun searchCryptoList(query: String) {
         viewModelScope.launch(Dispatchers.Default) {
-            // Eğer arama terimi boşsa, orijinal listeyi geri yükleyelim
             if (query.isEmpty()) {
-                cryptoList.value = initialCryptoList
+                _cryptoList.value = initialCryptoList
                 isSearchStarting = true
                 return@launch
             }
 
-            // İlk arama sırasında orijinal listeyi yedekleyelim
             if (isSearchStarting) {
-                initialCryptoList = cryptoList.value.toList()
+                initialCryptoList = _cryptoList.value.toList()
                 isSearchStarting = false
                 Log.e("CryptoViewModel", "Initial list saved: ${initialCryptoList.size} items")
             }
 
-            // Arama sonuçlarını filtreleyelim
             val result = initialCryptoList.filter {
                 it.symbol.contains(query.trim(), ignoreCase = true)
             }
             Log.e("CryptoViewModel", "Search query: $query, Result: ${result.size} items")
 
-            // Filtrelenmiş sonuçları listeye atayalım
-            cryptoList.value = result
+            _cryptoList.value = result
         }
     }
-
 
     fun saveSearchQuery(query: String) {
         viewModelScope.launch {
             repository.deleteSearchQueryByQuery(query)
-
             repository.insertSearchQuery(SearchQuery(query = query))
-            loadSearchQueries() // Reload search queries after saving
+            loadSearchQueries()
         }
     }
 
     fun deleteSearchQuery(query: SearchQuery) {
         viewModelScope.launch {
             repository.deleteSearchQuery(query)
-            loadSearchQueries() // Silme işleminden sonra geçmiş sorguları yeniden yükleyin.
+            loadSearchQueries()
         }
     }
 
-    // Function to load search queries from the repository
     private fun loadSearchQueries() {
         viewModelScope.launch {
-            searchQueryList.value = repository.getSearchQuery()
+            _searchQueryList.value = repository.getSearchQuery()
         }
     }
-
-
-
 }

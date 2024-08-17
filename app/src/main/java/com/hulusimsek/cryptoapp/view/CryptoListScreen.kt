@@ -1,5 +1,6 @@
 package com.hulusimsek.cryptoapp.view
 
+import PullToRefreshPage
 import android.telecom.StatusHints
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -80,6 +81,7 @@ import com.hulusimsek.cryptoapp.model.CryptoListItem
 import com.hulusimsek.cryptoapp.ui.theme.Alabaster
 import com.hulusimsek.cryptoapp.ui.theme.BlueMunsell
 import com.hulusimsek.cryptoapp.ui.theme.Bone
+import com.hulusimsek.cryptoapp.viewmodel.MainViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,52 +91,55 @@ fun CryptoListScreen(
     viewModel: CryptoListViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
+
+
     var isSearchBarExpanded by remember { mutableStateOf(false) }
-    val cryptoList by remember { viewModel.cryptoList }
+    val cryptoList by viewModel.cryptoList.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val errorMessage by remember { viewModel.errorMessage }
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background // Burada arka plan rengini ayarlayın
+    ) {
+        PullToRefreshPage(
+            isRefreshing = isLoading,
+            onRefresh = { viewModel.refresh() },
+        ) { contentModifier ->
+            Column(modifier = contentModifier) {
+                if (!isSearchBarExpanded) {
+                    Text(
+                        text = "Crypto App",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BlueMunsell
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
 
-
-
-    Surface(color = MaterialTheme.colorScheme.secondary, modifier = modifier.fillMaxSize()) {
-        Column {
-            if (!isSearchBarExpanded) {
-                Text(
-                    text = "Crypto App",
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BlueMunsell
-                )
+                        .animateContentSize() // İçerik boyutunu animasyonla değiştir
+                ) {
+                    SearchBar(
+                        onSearchQuery = { query ->
+                            viewModel.searchCryptoList(query)
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = if (isSearchBarExpanded) 0.dp else 16.dp) // Padding ayarı
+                            .fillMaxWidth(),
+                        onActiveChange = { active ->
+                            isSearchBarExpanded = active
+                        }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .animateContentSize() // İçerik boyutunu animasyonla değiştir
-            ) {
-                SearchBar(
-                    onSearchQuery = { query ->
-                        viewModel.searchCryptoList(query)
-                    },
-                    modifier = Modifier
-                        .padding(horizontal = if (isSearchBarExpanded) 0.dp else 16.dp) // Padding ayarı
-                        .fillMaxWidth(),
-                    onActiveChange = { active ->
-                        isSearchBarExpanded = active
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-
-            // Listeyi yalnızca SearchBar genişletilmediğinde göster
 
                 LazyColumn(contentPadding = PaddingValues(5.dp)) {
                     items(cryptoList) { crypto ->
@@ -144,15 +149,15 @@ fun CryptoListScreen(
 
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (isLoading) {
-                        CircularProgressIndicator(color = colorResource(id = R.color.color1))
+                        CircularProgressIndicator(color = BlueMunsell)
                     }
                     if (errorMessage.isNotEmpty()) {
                         RetryView(error = errorMessage) {
-                            viewModel.loadCrpyots()
+                            viewModel.refresh()
                         }
                     }
                 }
-
+            }
         }
     }
 }
@@ -165,10 +170,10 @@ fun SearchBar(
     onActiveChange: (Boolean) -> Unit = {},
     viewModel: CryptoListViewModel = hiltViewModel(),
     onSearchQuery: (String) -> Unit = {}
-    ) {
+) {
     var text by remember { mutableStateOf("") }
     var isActive by remember { mutableStateOf(false) }
-    val cryptoList by remember { viewModel.cryptoList }
+    val cryptoList by viewModel.cryptoList.collectAsState()
 
     androidx.compose.material3.SearchBar(
         modifier = modifier,
@@ -178,7 +183,7 @@ fun SearchBar(
             onSearchQuery(it) // Her harfe basıldığında arama yap
         },
         onSearch = {
-            if(it.isNotEmpty()) {
+            if (it.isNotEmpty()) {
                 onSearchQuery(text) // Search fonksiyonunu çağır
                 viewModel.saveSearchQuery(it)
                 isActive = false
@@ -214,7 +219,7 @@ fun SearchBar(
             }
         }
     ) {
-        if(text.isEmpty()) {
+        if (text.isEmpty()) {
             LazyColumn {
                 items(viewModel.searchQueryList.value.reversed()) { item ->
                     Row(
@@ -251,8 +256,7 @@ fun SearchBar(
                     }
                 }
             }
-        }
-        else {
+        } else {
             LazyColumn {
                 items(cryptoList) { item ->
                     Row(
@@ -288,18 +292,15 @@ fun SearchBar(
 
 
 @Composable
-fun CryptoList(navController: NavController, viewModel: CryptoListViewModel = hiltViewModel()){
-    val cryptoList by remember {
-        viewModel.cryptoList
-    }
-    val errorMessage by remember {
-        viewModel.errorMessage
-    }
+fun CryptoList(navController: NavController, viewModel: CryptoListViewModel = hiltViewModel()) {
+    val cryptoList by viewModel.cryptoList.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
     val isLoading by viewModel.isLoading.collectAsState()
 
     CryptoListView(cryptos = cryptoList, navController = navController)
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if(isLoading){
+        if (isLoading) {
             CircularProgressIndicator(color = BlueMunsell)
         }
         if (errorMessage.isNotEmpty()) {
@@ -309,6 +310,7 @@ fun CryptoList(navController: NavController, viewModel: CryptoListViewModel = hi
         }
     }
 }
+
 @Composable
 fun CryptoListView(cryptos: List<CryptoListItem>, navController: NavController) {
     LazyColumn(contentPadding = PaddingValues(10.dp)) {
@@ -319,13 +321,16 @@ fun CryptoListView(cryptos: List<CryptoListItem>, navController: NavController) 
 }
 
 @Composable
-fun CryptoRow(navController: NavController, crypto: CryptoListItem) {
+fun CryptoRow(
+    navController: NavController, mainViewModel: MainViewModel = hiltViewModel(),
+    crypto: CryptoListItem
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp, horizontal = 16.dp)
             .clickable {
-                navController.navigate("crypto_detail_screen/${crypto.symbol}/${crypto.price}")
+                navController.navigate("crypto_detail_screen/${crypto.symbol}")
             },
         elevation = CardDefaults.cardElevation(4.dp),
         shape = RoundedCornerShape(12.dp),
@@ -372,7 +377,7 @@ fun RetryView(
     Column {
         Text(text = error, color = Color.Red, fontSize = 20.sp)
         Spacer(modifier = Modifier.height(10.dp))
-        Button(onClick = {onRetry}, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+        Button(onClick = { onRetry }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
             Text(text = "Retry")
         }
     }

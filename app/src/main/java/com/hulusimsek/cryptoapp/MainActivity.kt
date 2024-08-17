@@ -18,7 +18,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.hulusimsek.cryptoapp.ui.theme.CryptoAppTheme
+import com.hulusimsek.cryptoapp.view.AppNavGraph
 import com.hulusimsek.cryptoapp.view.CryptoListScreen
+import com.hulusimsek.cryptoapp.view.PagerWithNavHost
 import com.hulusimsek.cryptoapp.viewmodel.CryptoListViewModel
 import com.hulusimsek.cryptoapp.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,25 +32,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CryptoAppTheme {
-                val navController = rememberNavController()
                 val mainViewModel: MainViewModel = viewModel()
+                val navController = rememberNavController()
+
 
                 Scaffold(
                     bottomBar = {
-                        BottomNavSwipeScreen(viewModel = mainViewModel, navController = navController)
+                        PagerWithNavHost(navController = navController)
                     }
                 ) { innerPadding ->
-                    NavHost(navController = navController, startDestination = "crypto_list_screen", Modifier.padding(innerPadding)) {
-                        composable("crypto_list_screen") {
-                            CryptoListScreen(navController = navController)
-                        }
-                        composable("crypto_detail_screen/{cryptoId}/{cryptoPrice}") { backStackEntry ->
-                            val cryptoId = backStackEntry.arguments?.getString("cryptoId") ?: ""
-                            val cryptoPrice = backStackEntry.arguments?.getString("cryptoPrice") ?: ""
-                            CryptoDetailScreen(id = cryptoId, price = cryptoPrice, navController = navController)
-                        }
-                    }
                 }
+
             }
         }
     }
