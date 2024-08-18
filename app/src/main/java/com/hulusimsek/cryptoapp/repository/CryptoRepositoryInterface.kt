@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.room.Room
 import com.hulusimsek.cryptoapp.entity.SearchQuery
+import com.hulusimsek.cryptoapp.model.Crypto
 import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.model.CryptoList
 import com.hulusimsek.cryptoapp.util.Resource
@@ -23,5 +24,8 @@ interface CryptoRepositoryInterface {
     suspend fun getCryptoList() : Resource<CryptoList>
 
     suspend fun getCrypto(id: String): Resource<CryptoItem>
+
+    suspend fun getCryptoList24hr(): Resource<Crypto>
+
 
 }

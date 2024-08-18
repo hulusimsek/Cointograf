@@ -9,6 +9,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hulusimsek.cryptoapp.entity.SearchQuery
+import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.model.CryptoListItem
 import com.hulusimsek.cryptoapp.repository.CryptoRepository
 import com.hulusimsek.cryptoapp.repository.CryptoRepositoryInterface
@@ -28,8 +29,8 @@ class CryptoListViewModel @Inject constructor(
     private val repository: CryptoRepositoryInterface
 ) : ViewModel() {
 
-    private val _cryptoList = MutableStateFlow<List<CryptoListItem>>(listOf())
-    val cryptoList: StateFlow<List<CryptoListItem>> = _cryptoList
+    private val _cryptoList = MutableStateFlow<List<CryptoItem>>(listOf())
+    val cryptoList: StateFlow<List<CryptoItem>> = _cryptoList
 
     private val _errorMessage = MutableStateFlow("")
     val errorMessage: StateFlow<String> = _errorMessage
@@ -43,7 +44,7 @@ class CryptoListViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private var initialCryptoList = listOf<CryptoListItem>()
+    private var initialCryptoList = listOf<CryptoItem>()
     private var isSearchStarting = true
 
     private val _searchQueryList = MutableStateFlow<List<SearchQuery>>(listOf())
@@ -72,12 +73,35 @@ class CryptoListViewModel @Inject constructor(
     fun loadCrpyots() {
         viewModelScope.launch {
             _isLoading.value = true
-            val result = repository.getCryptoList()
+            val result = repository.getCryptoList24hr()
 
             when (result) {
                 is Resource.Success -> {
                     val cryptoItems = result.data!!.mapIndexed { index, item ->
-                        CryptoListItem(item.symbol, item.price)
+                        CryptoItem(
+                            symbol = item.symbol,
+                            lastPrice = item.lastPrice,
+                            askPrice = item.askPrice,
+                            askQty = item.askQty,
+                            bidPrice = item.bidPrice,
+                            bidQty = item.bidQty,
+                            closeTime = item.closeTime,
+                            count = item.count,
+                            firstId = item.firstId,
+                            highPrice = item.highPrice,
+                            lastId = item.lastId,
+                            lastQty = item.lastQty,
+                            lowPrice = item.lowPrice,
+                            openPrice = item.openPrice,
+                            openTime = item.openTime,
+                            prevClosePrice = item.prevClosePrice,
+                            priceChange = item.priceChange,
+                            priceChangePercent = item.priceChangePercent,
+                            quoteVolume = item.quoteVolume,
+                            volume = item.volume,
+                            weightedAvgPrice = item.weightedAvgPrice
+                        )
+
                     }
 
                     // Arama başlamışsa, listeyi güncelle
@@ -109,7 +133,7 @@ class CryptoListViewModel @Inject constructor(
         _toastMessage.value = null
     }
 
-    private fun applySearchFilter(cryptoItems: List<CryptoListItem>): List<CryptoListItem> {
+    private fun applySearchFilter(cryptoItems: List<CryptoItem>): List<CryptoItem> {
         val currentQuery = _searchQuery.value
         return if (currentQuery.isEmpty()) {
             cryptoItems

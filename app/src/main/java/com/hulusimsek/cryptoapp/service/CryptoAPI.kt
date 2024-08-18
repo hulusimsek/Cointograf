@@ -1,5 +1,6 @@
 package com.hulusimsek.cryptoapp.service
 
+import com.hulusimsek.cryptoapp.model.Crypto
 import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.model.CryptoList
 import com.hulusimsek.cryptoapp.model.CryptoListItem
@@ -11,7 +12,7 @@ interface CryptoAPI {
     suspend fun getCryptoList(): CryptoList
 
     @GET("api/v3/ticker/24hr")
-    suspend fun getCryptoList24hr(): CryptoList
+    suspend fun getCryptoList24hr(): Crypto
 
     @GET("api/v3/ticker/24hr")
     suspend fun getCrypto(@Query("symbol") symbol : String) : CryptoItem

@@ -18,16 +18,13 @@ import javax.inject.Inject
 @HiltViewModel
 class CryptoDetailViewModel @Inject constructor(
     private val repository: CryptoRepositoryInterface
-) : ViewModel(){
+) : ViewModel() {
+
     private val _cryptoItems = MutableStateFlow<CryptoItem?>(null)
     val cryptoItems: StateFlow<CryptoItem?> = _cryptoItems
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage
-
-    private val _test = MutableStateFlow<String>("umit")
-    val test: StateFlow<String> = _test
-
 
     private val _currentCrypto = MutableStateFlow<String?>(null)
     val currentCrypto: StateFlow<String?> = _currentCrypto
@@ -42,38 +39,51 @@ class CryptoDetailViewModel @Inject constructor(
         viewModelScope.launch {
             Log.e("CryptoDetailViewModel", "Refresh started")
             _isLoading.value = true
-            _currentCrypto.value?.let {cryptoSymbol ->
-                loadCrpyoto(cryptoSymbol)
+            val cryptoSymbol = _currentCrypto.value
+
+            if (cryptoSymbol != null) {
+                val result = loadCrpyotoSuspend(cryptoSymbol)
+                when (result) {
+                    is Resource.Success -> {
+                        _toastMessage.value = "Veriler başarıyla güncellendi."
+                    }
+                    is Resource.Error -> {
+                        _toastMessage.value = "Veri güncellenirken bir hata oluştu."
+                    }
+                    else -> {
+                        _toastMessage.value = "Beklenmedik durum oluştu"
+                    }
+                }
+            } else {
+                _toastMessage.value = "Güncellenecek veri bulunamadı."
             }
+
             _isLoading.value = false
             Log.e("CryptoDetailViewModel", "Refresh ended")
         }
     }
 
-    fun loadCrpyoto(cryptoSymbol : String) {
-
-        viewModelScope.launch {
-            _isLoading.value = true
+    suspend fun loadCrpyotoSuspend(cryptoSymbol: String): Resource<CryptoItem> {
+        return try {
             _currentCrypto.value = cryptoSymbol
             val result = repository.getCrypto(cryptoSymbol)
-
-            when(result) {
+            when (result) {
                 is Resource.Success -> {
                     _cryptoItems.value = result.data!!
-
-                    _errorMessage.value = ""
-                    _toastMessage.value = "Veriler başarıyla güncellendi."
-                    _isLoading.value = false
+                    Resource.Success(result.data)
                 }
-
                 is Resource.Error -> {
                     _errorMessage.value = result.message!!
-                    _isLoading.value = false
+                    Resource.Error(result.message)
                 }
                 is Resource.Loading -> {
                     _isLoading.value = true
+                    Resource.Loading()
                 }
             }
+        } catch (e: Exception) {
+            _errorMessage.value = e.message ?: "Bir hata oluştu."
+            Resource.Error(e.message ?: "Bir hata oluştu.")
         }
     }
 

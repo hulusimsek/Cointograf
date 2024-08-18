@@ -2,6 +2,7 @@ package com.hulusimsek.cryptoapp.repository
 
 import androidx.lifecycle.LiveData
 import com.hulusimsek.cryptoapp.entity.SearchQuery
+import com.hulusimsek.cryptoapp.model.Crypto
 import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.model.CryptoList
 import com.hulusimsek.cryptoapp.roomDB.CryptoDao
@@ -48,6 +49,14 @@ class CryptoRepository @Inject constructor(
         }
         return Resource.Success(response)
     }
+
+    override suspend fun getCryptoList24hr(): Resource<Crypto> {
+        val response = try {
+            api.getCryptoList24hr()
+        } catch (e: Exception) {
+            return Resource.Error("Error")
+        }
+        return Resource.Success(response)    }
 
 
 }

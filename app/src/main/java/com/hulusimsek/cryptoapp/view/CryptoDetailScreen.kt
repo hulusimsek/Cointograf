@@ -42,45 +42,56 @@ fun CryptoDetailScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
-    val test by viewModel.test.collectAsState()
+
 
 
     LaunchedEffect(id) {
-        viewModel.loadCrpyoto(id)
+        viewModel.loadCrpyotoSuspend(id)
     }
 
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background // Burada arka plan rengini ayarlayın
+    ) {
+        PullToRefreshPage(
+            isRefreshing = isLoading,
+            onRefresh = { viewModel.refresh() }
+        ) { contentModifier ->
+            LazyColumn(
+                modifier = contentModifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp) // Optional: Add padding around the content
+            ) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp), // Optional: Add padding to the Box
+                        contentAlignment = Alignment.Center // Center both horizontally and vertically
+                    ) {
+                        // Use a Column to align vertically centered content
+                        Column(
+                            modifier = Modifier
+                                .wrapContentSize() // Wrap content to avoid stretching
+                                .align(Alignment.Center) // Center within the Box both horizontally and vertically
+                        ) {
+                            when {
+                                isLoading -> CircularProgressIndicator()
+                                errorMessage.isNotEmpty() -> Text(
+                                    text = errorMessage,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(16.dp)
+                                )
 
-    PullToRefreshPage(
-        isRefreshing = isLoading,
-        onRefresh = { viewModel.refresh() }
-    ) { contentModifier ->
-        LazyColumn(
-            modifier = contentModifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp) // Optional: Add padding around the content
-        ) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp), // Optional: Add padding to the Box
-                    contentAlignment = Alignment.Center // Ensure content is centered
-                ) {
-                    when {
-                        isLoading -> CircularProgressIndicator()
-                        errorMessage.isNotEmpty() -> Text(
-                            text = errorMessage,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        cryptoItem != null -> CryptoDetailContent(cryptoItem = cryptoItem!!)
-                        else -> Text("No data available")
+                                cryptoItem != null -> CryptoDetailContent(cryptoItem = cryptoItem!!)
+                                else -> Text("No data available")
+                            }
+                        }
                     }
                 }
             }
         }
     }
-
 }
 
 @Composable
