@@ -17,7 +17,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.hulusimsek.cryptoapp.ui.theme.CryptoAppTheme
-import com.hulusimsek.cryptoapp.view.AppNavGraph
 import com.hulusimsek.cryptoapp.view.CryptoListScreen
 import com.hulusimsek.cryptoapp.view.PagerWithNavHost
 import com.hulusimsek.cryptoapp.viewmodel.CryptoListViewModel
@@ -35,12 +34,9 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
 
-                Scaffold(
-                    bottomBar = {
                         PagerWithNavHost(navController = navController)
-                    }
-                ) { innerPadding ->
-                }
+
+
 
             }
         }

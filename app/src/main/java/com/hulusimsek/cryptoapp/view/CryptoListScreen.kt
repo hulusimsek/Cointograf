@@ -2,6 +2,7 @@ package com.hulusimsek.cryptoapp.view
 
 import PullToRefreshPage
 import android.telecom.StatusHints
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -74,6 +75,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ModifierInfo
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.work.ListenableWorker.Result.Retry
 import com.hulusimsek.cryptoapp.entity.SearchQuery
@@ -91,6 +93,18 @@ fun CryptoListScreen(
     viewModel: CryptoListViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val toastMessage by viewModel.toastMessage.collectAsState()
+
+
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            // Mesajı gösterdikten sonra temizle
+            viewModel.clearToastMessage()
+        }
+    }
+
 
 
     var isSearchBarExpanded by remember { mutableStateOf(false) }
@@ -174,6 +188,7 @@ fun SearchBar(
     var text by remember { mutableStateOf("") }
     var isActive by remember { mutableStateOf(false) }
     val cryptoList by viewModel.cryptoList.collectAsState()
+    val searchQueryList by viewModel.searchQueryList.collectAsState()
 
     androidx.compose.material3.SearchBar(
         modifier = modifier,
@@ -222,7 +237,7 @@ fun SearchBar(
     ) {
         if (text.isEmpty()) {
             LazyColumn {
-                items(viewModel.searchQueryList.value.reversed()) { item ->
+                items(searchQueryList.reversed()) { item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -37,6 +37,9 @@ class CryptoListViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
+    private val _toastMessage = MutableStateFlow<String?>(null)
+    val toastMessage: StateFlow<String?> = _toastMessage
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -88,6 +91,8 @@ class CryptoListViewModel @Inject constructor(
 
                     _errorMessage.value = ""
                     _isLoading.value = false
+                    _toastMessage.value = "Veriler başarıyla güncellendi." // Başarı durumunda mesajı ayarla
+
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message!!
@@ -98,6 +103,10 @@ class CryptoListViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun clearToastMessage() {
+        _toastMessage.value = null
     }
 
     private fun applySearchFilter(cryptoItems: List<CryptoListItem>): List<CryptoListItem> {
@@ -128,10 +137,14 @@ class CryptoListViewModel @Inject constructor(
             }
 
             // Arama sorgusunu kaydet
-            saveSearchQuery(query)
         }
     }
 
+    private fun loadSearchQueries() {
+        viewModelScope.launch {
+            _searchQueryList.value = repository.getSearchQuery()
+        }
+    }
     fun saveSearchQuery(query: String) {
         viewModelScope.launch {
             repository.deleteSearchQueryByQuery(query)
@@ -147,9 +160,5 @@ class CryptoListViewModel @Inject constructor(
         }
     }
 
-    private fun loadSearchQueries() {
-        viewModelScope.launch {
-            _searchQueryList.value = repository.getSearchQuery()
-        }
-    }
+
 }

@@ -1,11 +1,15 @@
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,32 +23,64 @@ fun CryptoDetailScreen(
     id: String,
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: CryptoDetailViewModel = hiltViewModel()
 ) {
-    val cryptoItem by remember { viewModel.cryptoItems }
-    val isLoading by remember { viewModel.isLoading }
-    val errorMessage by remember { viewModel.errorMessage }
+    val viewModel: CryptoDetailViewModel = hiltViewModel()
 
-    LaunchedEffect(Unit) {
+    val context = LocalContext.current
+    val toastMessage by viewModel.toastMessage.collectAsState()
+
+
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            // Mesajı gösterdikten sonra temizle
+            viewModel.clearToastMessage()
+        }
+    }
+
+    val cryptoItem by viewModel.cryptoItems.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    val test by viewModel.test.collectAsState()
+
+
+    LaunchedEffect(id) {
         viewModel.loadCrpyoto(id)
     }
 
-    Surface(color = MaterialTheme.colorScheme.secondary, modifier = modifier.fillMaxSize()) {
 
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            when {
-                isLoading -> CircularProgressIndicator()
-                errorMessage.isNotEmpty() -> Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(16.dp)
-                )
-
-                cryptoItem != null -> CryptoDetailContent(cryptoItem!!)
+    PullToRefreshPage(
+        isRefreshing = isLoading,
+        onRefresh = { viewModel.refresh() }
+    ) { contentModifier ->
+        LazyColumn(
+            modifier = contentModifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp) // Optional: Add padding around the content
+        ) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp), // Optional: Add padding to the Box
+                    contentAlignment = Alignment.Center // Ensure content is centered
+                ) {
+                    when {
+                        isLoading -> CircularProgressIndicator()
+                        errorMessage.isNotEmpty() -> Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        cryptoItem != null -> CryptoDetailContent(cryptoItem = cryptoItem!!)
+                        else -> Text("No data available")
+                    }
+                }
             }
         }
     }
+
 }
 
 @Composable

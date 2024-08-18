@@ -127,8 +127,8 @@ fun PagerWithNavHost(
                     composable("crypto_list_screen") {
                         CryptoListScreen(navController = navController)
                     }
-                    composable("crypto_detail_screen/{cryptoId}") { backStackEntry ->
-                        val cryptoId = backStackEntry.arguments?.getString("cryptoId") ?: ""
+                    composable("crypto_detail_screen/{cryptoId}") {
+                        val cryptoId = it.arguments?.getString("cryptoId") ?: ""
                         CryptoDetailScreen(id = cryptoId, navController = navController)
                     }
                 }
