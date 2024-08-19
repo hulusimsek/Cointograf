@@ -81,29 +81,61 @@ class HomeViewModel @Inject constructor(
             }
 
         _filterCryptoList.value = when (tabIndex) {
-            0 -> filteredList
-                .reversed() // Gelen listeyi ters çevir
-                .take(10)
+            0 -> {
+                //Log.d("TabFilter", "Tab 0 selected - Reversing list")
+                filteredList
+                    .reversed() // Gelen listeyi ters çevir
+                    .take(10)
+            }
 
             1 -> {
-                Log.e("filtreTest","buraya girdi")
-
+                //Log.d("TabFilter", "Tab 1 selected - Sorting by priceChangePercent descending")
                 filteredList
-                    .sortedByDescending { it.priceChangePercent.toDoubleOrNull() ?: 0.0 }
+                    .sortedByDescending { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
                     .take(10)
-            } // Yükselenler: priceChangePercent azalan
-            2 -> filteredList
-                .sortedBy { it.priceChangePercent.toDoubleOrNull() ?: 0.0 }
-                .take(10) // Düşenler: priceChangePercent artan
-            3 -> filteredList
-                .sortedByDescending { it.lastPrice.toDoubleOrNull() ?: 0.0 }
-                .take(10)
+                    .also { sortedList ->
+                        sortedList.forEach { item ->
+                            //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
+                        }
+                    }
+            }
 
-            4 -> filteredList
-                .sortedByDescending { it.volume.toDoubleOrZero() }
-                .take(10) // 24s Hacim: volume azalan
-            else -> filteredList
+            2 -> {
+                //Log.d("TabFilter", "Tab 2 selected - Sorting by priceChangePercent ascending")
+                filteredList
+                    .sortedBy { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
+                    .take(10)
+                    .also { sortedList ->
+                        sortedList.forEach { item ->
+                            //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
+                        }
+                    }
+            }
+
+            3 -> {
+                //Log.d("TabFilter", "Tab 3 selected - Sorting by lastPrice descending")
+                filteredList
+                    .sortedByDescending { it.lastPrice.replace(",", ".").toDoubleOrNull() ?: 0.0 }
+                    .take(10)
+            }
+
+            4 -> {
+                //Log.d("TabFilter", "Tab 4 selected - Sorting by volume descending")
+                filteredList
+                    .sortedByDescending { it.volume.replace(",", ".").toDoubleOrZero() }
+                    .take(10)
+            }
+
+            else -> {
+                //Log.d("TabFilter", "Unknown tab index selected")
+                filteredList
+            }
         }
+
+
+
+
+
     }
 
 

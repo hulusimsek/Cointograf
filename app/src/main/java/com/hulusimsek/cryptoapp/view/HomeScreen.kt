@@ -235,8 +235,10 @@ fun HomeScreen(
                             Row(
                                 modifier = Modifier
                                     .clickable { showDialog.value = true }
-                                    .weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp), // Yalnızca yatay padding ekleyin
+                                verticalAlignment = Alignment.CenterVertically, // Dikey hizalama merkez
+                                horizontalArrangement = Arrangement.Start // Yatay hizalama merkez
                             ) {
                                 Text(
                                     text = selectedSymbol ?: "Seçiniz",
@@ -245,14 +247,13 @@ fun HomeScreen(
                                         fontWeight = FontWeight.Normal,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                     ),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.align(Alignment.CenterVertically).padding(start = 24.dp) // Dikey hizalamayı sağla
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 Icon(
                                     imageVector = Icons.Filled.ArrowDropDown,
                                     contentDescription = "Tüm Piyasalar",
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(16.dp).align(Alignment.CenterVertically) // Dikey hizalamayı sağla
                                 )
                             }
 
@@ -279,6 +280,8 @@ fun HomeScreen(
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                     ),
+                                    modifier = Modifier.padding(end = 48.dp),
+
                                     textAlign = TextAlign.End
                                 )
                             }
@@ -344,7 +347,7 @@ fun HomeScreen(
                     Button(
                         onClick = { showDialog.value = false }
                     ) {
-                        Text("Tamam")
+                        Text("Okey")
                     }
                 }
             )
