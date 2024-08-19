@@ -1,6 +1,9 @@
 package com.hulusimsek.cryptoapp.model
 
 data class CryptoItem(
+    val name: String? = null,
+    val surname: String? = null,
+
     val askPrice: String,
     val askQty: String,
     val bidPrice: String,
@@ -10,7 +13,7 @@ data class CryptoItem(
     val firstId: Long,
     val highPrice: String,
     val lastId: Long,
-    val lastPrice: String,
+    var lastPrice: String,
     val lastQty: String,
     val lowPrice: String,
     val openPrice: String,

@@ -14,3 +14,6 @@ val RichBlack = Color(0xFF050505)
 val BlueMunsell = Color(0xFF009AAF)
 val Bone = Color(0xFFDDDBCB)
 val Alabaster = Color(0xFFE9F5F2)
+
+val dusenKirmizi = Color(0xFF920000)
+val yukselenYesil = Color(0xFF349457)

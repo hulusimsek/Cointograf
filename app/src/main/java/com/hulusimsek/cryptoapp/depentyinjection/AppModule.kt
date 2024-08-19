@@ -1,5 +1,6 @@
 package com.hulusimsek.cryptoapp.depentyinjection
 
+import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import com.hulusimsek.cryptoapp.repository.CryptoRepository
@@ -44,4 +45,10 @@ object AppModule {
     @Singleton
     @Provides
     fun provideCryptoRepository(api: CryptoAPI, dao: CryptoDao) = CryptoRepository(api, dao) as CryptoRepositoryInterface
+
+    @Provides
+    @Singleton
+    fun provideContext(application: Application): Context {
+        return application.applicationContext
+    }
 }

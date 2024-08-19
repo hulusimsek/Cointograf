@@ -1,36 +1,43 @@
 package com.hulusimsek.cryptoapp.viewmodel
 
+import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hulusimsek.cryptoapp.R
 import com.hulusimsek.cryptoapp.entity.SearchQuery
 import com.hulusimsek.cryptoapp.model.CryptoItem
-import com.hulusimsek.cryptoapp.model.CryptoListItem
-import com.hulusimsek.cryptoapp.repository.CryptoRepository
 import com.hulusimsek.cryptoapp.repository.CryptoRepositoryInterface
+import com.hulusimsek.cryptoapp.util.Constants.getBtcSymbols
+import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
 import com.hulusimsek.cryptoapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import retrofit2.http.Query
 import javax.inject.Inject
-import kotlinx.coroutines.flow.asStateFlow
 
 @HiltViewModel
-class CryptoListViewModel @Inject constructor(
-    private val repository: CryptoRepositoryInterface
+class HomeViewModel @Inject constructor(
+    private val repository: CryptoRepositoryInterface,
+    private val context: Context
 ) : ViewModel() {
 
     private val _cryptoList = MutableStateFlow<List<CryptoItem>>(listOf())
     val cryptoList: StateFlow<List<CryptoItem>> = _cryptoList
+
+    private val _filterCryptoList = MutableStateFlow<List<CryptoItem>>(listOf())
+    val filterCryptoList: StateFlow<List<CryptoItem>> = _filterCryptoList
+
+
+    private val _selectedSymbol = MutableStateFlow<String?>("USDT")
+    val selectedSymbol: StateFlow<String?> = _selectedSymbol
+
+
+    private val _selectedTabIndex = MutableStateFlow(0)
+    val selectedTabIndex: StateFlow<Int> = _selectedTabIndex
+
 
     private val _errorMessage = MutableStateFlow("")
     val errorMessage: StateFlow<String> = _errorMessage
@@ -55,18 +62,62 @@ class CryptoListViewModel @Inject constructor(
         loadSearchQueries()
     }
 
+    fun String.toDoubleOrZero(): Double = this.toDoubleOrNull() ?: 0.0
+
+    fun selectSymbol(symbol: String) {
+        _selectedSymbol.value = symbol
+    }
+
+    fun selectTab(tabIndex: Int) {
+        _selectedTabIndex.value = tabIndex
+        val filteredList =
+            if (_selectedSymbol.value.isNullOrEmpty() || _selectedSymbol.value == context.getString(
+                    R.string.allMarkets
+                )
+            ) {
+                _cryptoList.value
+            } else {
+                _cryptoList.value.filter { it.surname == _selectedSymbol.value }
+            }
+
+        _filterCryptoList.value = when (tabIndex) {
+            0 -> filteredList
+                .reversed() // Gelen listeyi ters çevir
+                .take(10)
+
+            1 -> {
+                Log.e("filtreTest","buraya girdi")
+
+                filteredList
+                    .sortedByDescending { it.priceChangePercent.toDoubleOrNull() ?: 0.0 }
+                    .take(10)
+            } // Yükselenler: priceChangePercent azalan
+            2 -> filteredList
+                .sortedBy { it.priceChangePercent.toDoubleOrNull() ?: 0.0 }
+                .take(10) // Düşenler: priceChangePercent artan
+            3 -> filteredList
+                .sortedByDescending { it.lastPrice.toDoubleOrNull() ?: 0.0 }
+                .take(10)
+
+            4 -> filteredList
+                .sortedByDescending { it.volume.toDoubleOrZero() }
+                .take(10) // 24s Hacim: volume azalan
+            else -> filteredList
+        }
+    }
+
+
     fun refresh() {
         viewModelScope.launch {
             _isLoading.value = true
-            loadCrpyots()
-            // Arama sorgusu varsa, arama işlemi yap
-            if (_searchQuery.value.isNotEmpty()) {
-                searchCryptoList(_searchQuery.value)
-            } else {
-                // Arama sorgusu boşsa, listeyi başlat
-                _cryptoList.value = initialCryptoList
+            try {
+                loadCrpyots()
+                selectTab(_selectedTabIndex.value)
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "An error occurred"
+            } finally {
+                _isLoading.value = false
             }
-            _isLoading.value = false
         }
     }
 
@@ -77,10 +128,27 @@ class CryptoListViewModel @Inject constructor(
 
             when (result) {
                 is Resource.Success -> {
-                    val cryptoItems = result.data!!.mapIndexed { index, item ->
+                    val cryptoItems = result.data!!.map { item ->
+                        // Varsayılan olarak surname ve name ayarla
+                        var name = item.symbol
+                        var surname = ""
+
+                        // Surname olarak ayırmak istediğimiz listeyi kullanarak ayrıştırma yapıyoruz
+                        getBtcSymbols(context = context).findLast { item.symbol.endsWith(it) }
+                            ?.let { potentialSurname ->
+                                surname = potentialSurname
+                                name = item.symbol.removeSuffix(potentialSurname)
+                            }
+
+
+                        val priceChangePercent = item.priceChangePercent.toFloatOrNull() ?: 0f
+                        val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
+
                         CryptoItem(
+                            surname = surname,
+                            name = name,
                             symbol = item.symbol,
-                            lastPrice = item.lastPrice,
+                            lastPrice = removeTrailingZeros(item.lastPrice),
                             askPrice = item.askPrice,
                             askQty = item.askQty,
                             bidPrice = item.bidPrice,
@@ -96,12 +164,11 @@ class CryptoListViewModel @Inject constructor(
                             openTime = item.openTime,
                             prevClosePrice = item.prevClosePrice,
                             priceChange = item.priceChange,
-                            priceChangePercent = item.priceChangePercent,
+                            priceChangePercent = formattedPriceChangePercent,
                             quoteVolume = item.quoteVolume,
                             volume = item.volume,
                             weightedAvgPrice = item.weightedAvgPrice
                         )
-
                     }
 
                     // Arama başlamışsa, listeyi güncelle
@@ -115,13 +182,18 @@ class CryptoListViewModel @Inject constructor(
 
                     _errorMessage.value = ""
                     _isLoading.value = false
-                    _toastMessage.value = "Veriler başarıyla güncellendi." // Başarı durumunda mesajı ayarla
+                    selectTab(_selectedTabIndex.value)
+
+                    _toastMessage.value =
+                        "Veriler başarıyla güncellendi." // Başarı durumunda mesajı ayarla
 
                 }
+
                 is Resource.Error -> {
                     _errorMessage.value = result.message!!
                     _isLoading.value = false
                 }
+
                 is Resource.Loading -> {
                     _isLoading.value = true
                 }
@@ -169,6 +241,7 @@ class CryptoListViewModel @Inject constructor(
             _searchQueryList.value = repository.getSearchQuery()
         }
     }
+
     fun saveSearchQuery(query: String) {
         viewModelScope.launch {
             repository.deleteSearchQueryByQuery(query)

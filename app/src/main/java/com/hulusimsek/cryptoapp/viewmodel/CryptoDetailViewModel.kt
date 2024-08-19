@@ -8,6 +8,7 @@ import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.model.CryptoListItem
 import com.hulusimsek.cryptoapp.repository.CryptoRepository
 import com.hulusimsek.cryptoapp.repository.CryptoRepositoryInterface
+import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
 import com.hulusimsek.cryptoapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +71,7 @@ class CryptoDetailViewModel @Inject constructor(
             when (result) {
                 is Resource.Success -> {
                     _cryptoItems.value = result.data!!
+                    _cryptoItems.value!!.lastPrice = removeTrailingZeros(_cryptoItems.value!!.lastPrice)
                     Resource.Success(result.data)
                 }
                 is Resource.Error -> {

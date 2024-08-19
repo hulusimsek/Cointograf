@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">CryptoApp</string>
+    <string name="allMarkets">All Markets</string>
+
 </resources>
