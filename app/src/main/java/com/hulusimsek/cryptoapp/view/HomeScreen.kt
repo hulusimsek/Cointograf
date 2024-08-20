@@ -70,6 +70,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.ui.theme.BlueMunsell
@@ -174,51 +175,47 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 0.dp)
                 ) {
                     Tab(
-                        text = { Text("Yeni Listelenenler") },
+                        text = { Text(stringResource(R.string.newListings)) },
                         selected = selectedTabIndex == 0,
                         onClick = {
                             viewModel.selectTab(0) // Tab seçimi değiştiğinde sıralamayı güncelle
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-
                     )
                     Tab(
-                        text = { Text("Yükselenler") },
+                        text = { Text(stringResource(R.string.gainers)) },
                         selected = selectedTabIndex == 1,
                         onClick = {
                             viewModel.selectTab(1) // Tab seçimi değiştiğinde sıralamayı güncelle
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-
                     )
                     Tab(
-                        text = { Text("Düşenler") },
+                        text = { Text(stringResource(R.string.losers)) },
                         selected = selectedTabIndex == 2,
                         onClick = {
                             viewModel.selectTab(2) // Tab seçimi değiştiğinde sıralamayı güncelle
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-
                     )
                     Tab(
-                        text = { Text("Piyasa Değeri") },
+                        text = { Text(stringResource(R.string.marketCap)) },
                         selected = selectedTabIndex == 3,
                         onClick = {
                             viewModel.selectTab(3) // Tab seçimi değiştiğinde sıralamayı güncelle
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-
                     )
                     Tab(
-                        text = { Text("24S Hacim") },
+                        text = { Text(stringResource(R.string.volume24h)) },
                         selected = selectedTabIndex == 4,
                         onClick = {
                             viewModel.selectTab(4) // Tab seçimi değiştiğinde sıralamayı güncelle
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-
                     )
                 }
+
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -251,7 +248,7 @@ fun HomeScreen(
                                 )
                                 Icon(
                                     imageVector = Icons.Filled.ArrowDropDown,
-                                    contentDescription = "Tüm Piyasalar",
+                                    contentDescription = stringResource(R.string.allMarkets),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp).align(Alignment.CenterVertically) // Dikey hizalamayı sağla
                                 )
@@ -264,7 +261,7 @@ fun HomeScreen(
                                 modifier = Modifier.weight(2f)
                             ) {
                                 Text(
-                                    text = "Fiyat",
+                                    text = stringResource(R.string.price),
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
@@ -274,7 +271,7 @@ fun HomeScreen(
                                     textAlign = TextAlign.End
                                 )
                                 Text(
-                                    text = "24s Değişim",
+                                    text = stringResource(R.string.price_change_24h),
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
@@ -326,7 +323,7 @@ fun HomeScreen(
         if (showDialog.value) {
             AlertDialog(
                 onDismissRequest = { showDialog.value = false },
-                title = { Text(text = "Select") },
+                title = { Text(text = stringResource(R.string.select)) },
                 text = {
                     Column {
                         getBtcSymbols(context).forEach { symbol ->
@@ -347,7 +344,7 @@ fun HomeScreen(
                     Button(
                         onClick = { showDialog.value = false }
                     ) {
-                        Text("Okey")
+                        Text(stringResource(R.string.ok))
                     }
                 }
             )

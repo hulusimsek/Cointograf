@@ -16,11 +16,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.hulusimsek.cryptoapp.R
 import com.hulusimsek.cryptoapp.view.navbar.NavItem
+import com.hulusimsek.cryptoapp.view.navbar.NavPath
 import com.hulusimsek.cryptoapp.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -31,9 +34,13 @@ fun PagerWithNavHost(
     navController: NavHostController,
     viewModel: MainViewModel = hiltViewModel()// ViewModel'inizi burada tanımlayın
 ) {
-    val pagerState = rememberPagerState(pageCount = {4})
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val coroutineScope = rememberCoroutineScope() // CoroutineScope oluşturuluyor
-    val navItems = listOf(NavItem.Home, NavItem.Markets, NavItem.List, NavItem.Profile)
+    val home = NavItem(NavPath.HOME.toString(), stringResource(R.string.home), R.drawable.baseline_home_24)
+    val markets = NavItem(NavPath.MARKETS.toString(), stringResource(R.string.markets), R.drawable.baseline_bar_chart_24)
+    val list = NavItem(NavPath.LIST.toString(), stringResource(R.string.list), R.drawable.baseline_currency_bitcoin_24)
+    val profile = NavItem(NavPath.PROFILE.toString(), stringResource(R.string.profile), R.drawable.baseline_home_24)
+    val navItems = listOf(home,markets,list,profile)
 
     Scaffold(
         bottomBar = {
@@ -43,7 +50,12 @@ fun PagerWithNavHost(
                 navItems.forEachIndexed { index, item ->
                     NavigationBarItem(
                         alwaysShowLabel = true,
-                        icon = { Icon(painter = painterResource(id = item.iconId), contentDescription = item.title) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(id = item.iconId),
+                                contentDescription = item.title
+                            )
+                        },
                         label = { Text(item.title) },
                         selected = currentPage == index,
                         onClick = {
@@ -52,13 +64,13 @@ fun PagerWithNavHost(
                                 pagerState.animateScrollToPage(index)
                                 // Ana sayfayı göstermek için mevcut sayfa yığını temizlenir
                                 if (index == 0) { // Ana sayfaya gidiyorsak
-                                    navController.popBackStack(navController.graph.startDestinationId, inclusive = false)
+                                    navController.popBackStack(
+                                        navController.graph.startDestinationId,
+                                        inclusive = false
+                                    )
                                 }
                             }
-
                         }
-
-
                     )
                 }
             }

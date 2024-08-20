@@ -1,5 +1,23 @@
 <resources>
     <string name="app_name">CryptoApp</string>
+    /*Bottom menu*/
+    <string name="home">Home</string>
+    <string name="markets">Markets</string>
+    <string name="list">List</string>
+    <string name="profile">Profile</string>
+    /*Ana sayfa*/
+
     <string name="allMarkets">All Markets</string>
+    <string name="newListings">New Listings</string>
+    <string name="gainers">Gainers</string>
+    <string name="losers">Losers</string>
+    <string name="marketCap">Market Cap</string>
+    <string name="volume24h">24h Volume</string>
+    <string name="price">Price</string>
+    <string name="price_change_24h">24H Change</string>
+    <string name="select">Select</string>
+    <string name="ok">OK</string>
+
+
 
 </resources>
