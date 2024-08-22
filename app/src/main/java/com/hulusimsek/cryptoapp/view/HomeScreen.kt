@@ -83,7 +83,7 @@ import kotlinx.coroutines.launch
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -96,16 +96,29 @@ fun HomeScreen(
     val filterCryptoList by viewModel.filterCryptoList.collectAsState()
     val cryptoList by viewModel.cryptoList.collectAsState()
 
+    val tab0 by viewModel.filterCryptoList.collectAsState()
+    val tab1 by viewModel.tab1.collectAsState()
+    val tab2 by viewModel.tab2.collectAsState()
+    val tab3 by viewModel.tab3.collectAsState()
+    val tab4 by viewModel.tab4.collectAsState()
+
     val selectedSymbol by viewModel.selectedSymbol.collectAsState()
     val showDialog = remember { mutableStateOf(false) }
-
-
+    val pagerState = rememberPagerState(pageCount = { 5 }) // 5 sayfa için ayarlandı
 
 
     val isLoading by viewModel.isLoading.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            viewModel.selectTab(page)
+        }
+    }
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
@@ -179,6 +192,9 @@ fun HomeScreen(
                         selected = selectedTabIndex == 0,
                         onClick = {
                             viewModel.selectTab(0) // Tab seçimi değiştiğinde sıralamayı güncelle
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(0)
+                            }
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
                     )
@@ -187,6 +203,9 @@ fun HomeScreen(
                         selected = selectedTabIndex == 1,
                         onClick = {
                             viewModel.selectTab(1) // Tab seçimi değiştiğinde sıralamayı güncelle
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(1)
+                            }
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
                     )
@@ -195,6 +214,9 @@ fun HomeScreen(
                         selected = selectedTabIndex == 2,
                         onClick = {
                             viewModel.selectTab(2) // Tab seçimi değiştiğinde sıralamayı güncelle
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(2)
+                            }
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
                     )
@@ -203,6 +225,9 @@ fun HomeScreen(
                         selected = selectedTabIndex == 3,
                         onClick = {
                             viewModel.selectTab(3) // Tab seçimi değiştiğinde sıralamayı güncelle
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(3)
+                            }
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
                     )
@@ -211,6 +236,9 @@ fun HomeScreen(
                         selected = selectedTabIndex == 4,
                         onClick = {
                             viewModel.selectTab(4) // Tab seçimi değiştiğinde sıralamayı güncelle
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(4)
+                            }
                         },
                         modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
                     )
@@ -219,92 +247,71 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                LazyColumn(contentPadding = PaddingValues(5.dp)) {
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Seçim yapma ve simge göstergesi
-                            Row(
-                                modifier = Modifier
-                                    .clickable { showDialog.value = true }
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp), // Yalnızca yatay padding ekleyin
-                                verticalAlignment = Alignment.CenterVertically, // Dikey hizalama merkez
-                                horizontalArrangement = Arrangement.Start // Yatay hizalama merkez
-                            ) {
-                                Text(
-                                    text = selectedSymbol ?: "Seçiniz",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    ),
-                                    modifier = Modifier.align(Alignment.CenterVertically).padding(start = 24.dp) // Dikey hizalamayı sağla
-                                )
-                                Icon(
-                                    imageVector = Icons.Filled.ArrowDropDown,
-                                    contentDescription = stringResource(R.string.allMarkets),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp).align(Alignment.CenterVertically) // Dikey hizalamayı sağla
-                                )
-                            }
-
-                            // Fiyat ve 24s Değişim başlıkları
-                            Row(
-                                horizontalArrangement = Arrangement.End,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(2f)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.price),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    ),
-                                    modifier = Modifier.padding(end = 16.dp),
-                                    textAlign = TextAlign.End
-                                )
-                                Text(
-                                    text = stringResource(R.string.price_change_24h),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    ),
-                                    modifier = Modifier.padding(end = 48.dp),
-
-                                    textAlign = TextAlign.End
-                                )
-                            }
-                        }
-
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxHeight()
+                ) { page ->
+                    when (page) {
+                        0 -> HomeLazyColumn(
+                            navController = navController,
+                            cryptoList = cryptoList,
+                            filterCryptoList = tab0,
+                            searchQuery = searchQuery,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            selectedSymbol = selectedSymbol,
+                            showDialog = showDialog,
+                            viewModel = viewModel
+                        )
+                        1 -> HomeLazyColumn(
+                            navController = navController,
+                            cryptoList = cryptoList,
+                            filterCryptoList = tab1,
+                            searchQuery = searchQuery,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            selectedSymbol = selectedSymbol,
+                            showDialog = showDialog,
+                            viewModel = viewModel
+                        )
+                        2 -> HomeLazyColumn(
+                            navController = navController,
+                            cryptoList = cryptoList,
+                            filterCryptoList = tab2,
+                            searchQuery = searchQuery,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            selectedSymbol = selectedSymbol,
+                            showDialog = showDialog,
+                            viewModel = viewModel
+                        )
+                        3 -> HomeLazyColumn(
+                            navController = navController,
+                            cryptoList = cryptoList,
+                            filterCryptoList = tab3,
+                            searchQuery = searchQuery,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            selectedSymbol = selectedSymbol,
+                            showDialog = showDialog,
+                            viewModel = viewModel
+                        )
+                        4 -> HomeLazyColumn(
+                            navController = navController,
+                            cryptoList = cryptoList,
+                            filterCryptoList = tab4,
+                            searchQuery = searchQuery,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            selectedSymbol = selectedSymbol,
+                            showDialog = showDialog,
+                            viewModel = viewModel
+                        )
                     }
-
-
-
-
-
-
-
-
-                    if(searchQuery.isEmpty()){
-                        items(filterCryptoList) { crypto ->
-                            CryptoRow(navController = navController, crypto = crypto)
-                        }
-                    }
-                    else {
-                        items(cryptoList) { crypto ->
-                            CryptoRow(navController = navController, crypto = crypto)
-                        }
-                    }
-
                 }
+
+
 
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (isLoading) {
@@ -327,8 +334,12 @@ fun HomeScreen(
                 text = {
                     Column {
                         getBtcSymbols(context).forEach { symbol ->
-                            Row (modifier = Modifier.fillMaxWidth().clickable { viewModel.selectSymbol(symbol)
-                                showDialog.value = false }){
+                            Row(modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.selectSymbol(symbol)
+                                    showDialog.value = false
+                                }) {
                                 Text(
                                     text = symbol,
                                     modifier = Modifier
@@ -353,6 +364,7 @@ fun HomeScreen(
 
     }
 }
+
 @Composable
 fun MarketSelectionDialog(
     showDialog: Boolean,
@@ -516,7 +528,91 @@ fun SearchBar(
         }
     }
 }
+@Composable
+fun CryptoListView(
+    navController: NavController,
+    filterCryptoList: List<CryptoItem>,
+    searchQuery: String,
+    cryptoList: List<CryptoItem>
+) {
+    LazyColumn(contentPadding = PaddingValues(5.dp)) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clickable { }
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text(
+                        text = "Seçiniz",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically)
+                            .padding(start = 24.dp)
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .align(Alignment.CenterVertically)
+                    )
+                }
 
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(2f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.price),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        modifier = Modifier.padding(end = 16.dp),
+                        textAlign = TextAlign.End
+                    )
+                    Text(
+                        text = stringResource(R.string.price_change_24h),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        modifier = Modifier.padding(end = 48.dp),
+                        textAlign = TextAlign.End
+                    )
+                }
+            }
+        }
+
+        if (searchQuery.isEmpty()) {
+            items(filterCryptoList) { crypto ->
+                CryptoRow(navController = navController, crypto = crypto)
+            }
+        } else {
+            items(cryptoList) { crypto ->
+                CryptoRow(navController = navController, crypto = crypto)
+            }
+        }
+    }
+}
 
 @Composable
 fun CryptoList(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
@@ -575,7 +671,7 @@ fun CryptoRow(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if(crypto.name!=null && crypto.surname!=null){
+                if (crypto.name != null && crypto.surname != null) {
                     Text(
                         text = crypto.name,
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp),
@@ -588,8 +684,7 @@ fun CryptoRow(
                         fontWeight = FontWeight.Normal,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
-                }
-                else {
+                } else {
                     Text(
                         text = crypto.symbol,
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp),
@@ -623,7 +718,7 @@ fun CryptoRow(
                         .padding(horizontal = 12.dp, vertical = 6.dp) // Padding ekleyin
                 ) {
                     Text(
-                        text =  crypto.priceChangePercent + "%",
+                        text = crypto.priceChangePercent + "%",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 16.sp), // Font boyutunu artırın
                         color = Color.White
                     )

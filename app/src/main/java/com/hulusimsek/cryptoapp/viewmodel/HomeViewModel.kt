@@ -31,6 +31,24 @@ class HomeViewModel @Inject constructor(
     val filterCryptoList: StateFlow<List<CryptoItem>> = _filterCryptoList
 
 
+    private val _tab0 = MutableStateFlow<List<CryptoItem>>(listOf())
+    val tab0: StateFlow<List<CryptoItem>> = _tab0
+
+    private val _tab1 = MutableStateFlow<List<CryptoItem>>(listOf())
+    val tab1: StateFlow<List<CryptoItem>> = _tab1
+
+    private val _tab2 = MutableStateFlow<List<CryptoItem>>(listOf())
+    val tab2: StateFlow<List<CryptoItem>> = _tab2
+
+    private val _tab3 = MutableStateFlow<List<CryptoItem>>(listOf())
+    val tab3: StateFlow<List<CryptoItem>> = _tab3
+
+    private val _tab4 = MutableStateFlow<List<CryptoItem>>(listOf())
+    val tab4: StateFlow<List<CryptoItem>> = _tab4
+
+
+
+
     private val _selectedSymbol = MutableStateFlow<String?>("USDT")
     val selectedSymbol: StateFlow<String?> = _selectedSymbol
 
@@ -60,6 +78,9 @@ class HomeViewModel @Inject constructor(
     init {
         loadCrpyots()
         loadSearchQueries()
+
+
+
     }
 
     fun String.toDoubleOrZero(): Double = this.toDoubleOrNull() ?: 0.0
@@ -80,17 +101,18 @@ class HomeViewModel @Inject constructor(
                 _cryptoList.value.filter { it.surname == _selectedSymbol.value }
             }
 
-        _filterCryptoList.value = when (tabIndex) {
+         when (tabIndex) {
             0 -> {
-                //Log.d("TabFilter", "Tab 0 selected - Reversing list")
-                filteredList
+                _tab0.value =filteredList
                     .reversed() // Gelen listeyi ters çevir
                     .take(10)
+                //Log.d("TabFilter", "Tab 0 selected - Reversing list")
+                _filterCryptoList.value = _tab0.value
             }
 
             1 -> {
                 //Log.d("TabFilter", "Tab 1 selected - Sorting by priceChangePercent descending")
-                filteredList
+                _tab1.value=filteredList
                     .sortedByDescending { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
                     .take(10)
                     .also { sortedList ->
@@ -98,11 +120,12 @@ class HomeViewModel @Inject constructor(
                             //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
                         }
                     }
+                _filterCryptoList.value = _tab1.value
             }
 
             2 -> {
                 //Log.d("TabFilter", "Tab 2 selected - Sorting by priceChangePercent ascending")
-                filteredList
+                _tab2.value=filteredList
                     .sortedBy { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
                     .take(10)
                     .also { sortedList ->
@@ -110,20 +133,23 @@ class HomeViewModel @Inject constructor(
                             //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
                         }
                     }
+                _filterCryptoList.value = _tab2.value
             }
 
             3 -> {
                 //Log.d("TabFilter", "Tab 3 selected - Sorting by lastPrice descending")
-                filteredList
+                _tab3.value=filteredList
                     .sortedByDescending { it.lastPrice.replace(",", ".").toDoubleOrNull() ?: 0.0 }
                     .take(10)
+                _filterCryptoList.value = _tab3.value
             }
 
             4 -> {
                 //Log.d("TabFilter", "Tab 4 selected - Sorting by volume descending")
-                filteredList
+                _tab4.value=filteredList
                     .sortedByDescending { it.volume.replace(",", ".").toDoubleOrZero() }
                     .take(10)
+                _filterCryptoList.value = _tab4.value
             }
 
             else -> {
