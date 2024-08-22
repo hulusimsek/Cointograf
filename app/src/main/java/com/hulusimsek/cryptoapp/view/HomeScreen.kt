@@ -72,6 +72,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.google.accompanist.pager.ExperimentalPagerApi
+import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.ui.theme.BlueMunsell
 import com.hulusimsek.cryptoapp.ui.theme.dusenKirmizi
@@ -79,11 +80,12 @@ import com.hulusimsek.cryptoapp.ui.theme.yukselenYesil
 import com.hulusimsek.cryptoapp.util.Constants.getBtcSymbols
 import com.hulusimsek.cryptoapp.viewmodel.MainViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalPagerApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -96,7 +98,7 @@ fun HomeScreen(
     val filterCryptoList by viewModel.filterCryptoList.collectAsState()
     val cryptoList by viewModel.cryptoList.collectAsState()
 
-    val tab0 by viewModel.filterCryptoList.collectAsState()
+    val tab0 by viewModel.tab0.collectAsState()
     val tab1 by viewModel.tab1.collectAsState()
     val tab2 by viewModel.tab2.collectAsState()
     val tab3 by viewModel.tab3.collectAsState()
@@ -106,19 +108,11 @@ fun HomeScreen(
     val showDialog = remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(pageCount = { 5 }) // 5 sayfa için ayarlandı
 
-
     val isLoading by viewModel.isLoading.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     val errorMessage by viewModel.errorMessage.collectAsState()
     val coroutineScope = rememberCoroutineScope()
-
-
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
-            viewModel.selectTab(page)
-        }
-    }
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
@@ -129,6 +123,14 @@ fun HomeScreen(
 
     LaunchedEffect(showDialog.value) {
         viewModel.selectTab(selectedTabIndex)
+    }
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged() // Aynı sayfaya tekrar geçiş yapılırsa gereksiz güncellemeyi engeller
+            .collect { page ->
+                viewModel.selectTab(page)
+            }
     }
 
     var isSearchBarExpanded by remember { mutableStateOf(false) }
@@ -146,8 +148,7 @@ fun HomeScreen(
                 if (!isSearchBarExpanded) {
                     Text(
                         text = "Crypto App",
-                        modifier = Modifier
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Bold,
@@ -165,7 +166,7 @@ fun HomeScreen(
                             viewModel.searchCryptoList(query)
                         },
                         modifier = Modifier
-                            .padding(horizontal = if (isSearchBarExpanded) 0.dp else 16.dp) // Padding ayarı
+                            .padding(horizontal = if (isSearchBarExpanded) 0.dp else 16.dp)
                             .fillMaxWidth(),
                         onActiveChange = { active ->
                             isSearchBarExpanded = active
@@ -244,74 +245,34 @@ fun HomeScreen(
                     )
                 }
 
-
                 Spacer(modifier = Modifier.height(10.dp))
 
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier
-                        .fillMaxHeight()
+                    modifier = Modifier.fillMaxSize(),
+                    key = { page -> page } // Pager'da her sayfanın anahtarını belirleyin
                 ) { page ->
-                    when (page) {
-                        0 -> HomeLazyColumn(
-                            navController = navController,
-                            cryptoList = cryptoList,
-                            filterCryptoList = tab0,
-                            searchQuery = searchQuery,
-                            isLoading = isLoading,
-                            errorMessage = errorMessage,
-                            selectedSymbol = selectedSymbol,
-                            showDialog = showDialog,
-                            viewModel = viewModel
-                        )
-                        1 -> HomeLazyColumn(
-                            navController = navController,
-                            cryptoList = cryptoList,
-                            filterCryptoList = tab1,
-                            searchQuery = searchQuery,
-                            isLoading = isLoading,
-                            errorMessage = errorMessage,
-                            selectedSymbol = selectedSymbol,
-                            showDialog = showDialog,
-                            viewModel = viewModel
-                        )
-                        2 -> HomeLazyColumn(
-                            navController = navController,
-                            cryptoList = cryptoList,
-                            filterCryptoList = tab2,
-                            searchQuery = searchQuery,
-                            isLoading = isLoading,
-                            errorMessage = errorMessage,
-                            selectedSymbol = selectedSymbol,
-                            showDialog = showDialog,
-                            viewModel = viewModel
-                        )
-                        3 -> HomeLazyColumn(
-                            navController = navController,
-                            cryptoList = cryptoList,
-                            filterCryptoList = tab3,
-                            searchQuery = searchQuery,
-                            isLoading = isLoading,
-                            errorMessage = errorMessage,
-                            selectedSymbol = selectedSymbol,
-                            showDialog = showDialog,
-                            viewModel = viewModel
-                        )
-                        4 -> HomeLazyColumn(
-                            navController = navController,
-                            cryptoList = cryptoList,
-                            filterCryptoList = tab4,
-                            searchQuery = searchQuery,
-                            isLoading = isLoading,
-                            errorMessage = errorMessage,
-                            selectedSymbol = selectedSymbol,
-                            showDialog = showDialog,
-                            viewModel = viewModel
-                        )
+                    val tabCryptoList = when (page) {
+                        0 -> tab0
+                        1 -> tab1
+                        2 -> tab2
+                        3 -> tab3
+                        4 -> tab4
+                        else -> emptyList()
                     }
+
+                    HomeLazyColumn(
+                        navController = navController,
+                        cryptoList = cryptoList,
+                        filterCryptoList = tabCryptoList,
+                        searchQuery = searchQuery,
+                        isLoading = isLoading,
+                        errorMessage = errorMessage,
+                        selectedSymbol = selectedSymbol,
+                        showDialog = showDialog,
+                        viewModel = viewModel
+                    )
                 }
-
-
 
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (isLoading) {
@@ -323,7 +284,6 @@ fun HomeScreen(
                         }
                     }
                 }
-
             }
         }
 
@@ -338,16 +298,16 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     viewModel.selectSymbol(symbol)
+                                    viewModel.selectTab(selectedTabIndex)
+                                    viewModel.filterList()
                                     showDialog.value = false
                                 }) {
                                 Text(
                                     text = symbol,
-                                    modifier = Modifier
-                                        .padding(vertical = 8.dp),
+                                    modifier = Modifier.padding(vertical = 8.dp),
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp)
                                 )
                             }
-
                         }
                     }
                 },
@@ -360,11 +320,8 @@ fun HomeScreen(
                 }
             )
         }
-
-
     }
 }
-
 @Composable
 fun MarketSelectionDialog(
     showDialog: Boolean,

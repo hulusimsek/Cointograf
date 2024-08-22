@@ -126,8 +126,8 @@ dependencies {
     implementation ("androidx.compose.ui:ui:1.6.8")
 
 
-    implementation("com.google.accompanist:accompanist-pager:0.30.0")
-    implementation("com.google.accompanist:accompanist-pager-indicators:0.30.0")
+    implementation("com.google.accompanist:accompanist-pager:0.28.0")
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.28.0")
     implementation ("com.github.skydoves:landscapist:1.4.5")
     implementation ("androidx.compose.material:material:1.1.1")
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.24.13-rc")

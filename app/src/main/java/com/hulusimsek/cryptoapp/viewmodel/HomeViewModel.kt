@@ -47,8 +47,6 @@ class HomeViewModel @Inject constructor(
     val tab4: StateFlow<List<CryptoItem>> = _tab4
 
 
-
-
     private val _selectedSymbol = MutableStateFlow<String?>("USDT")
     val selectedSymbol: StateFlow<String?> = _selectedSymbol
 
@@ -80,7 +78,6 @@ class HomeViewModel @Inject constructor(
         loadSearchQueries()
 
 
-
     }
 
     fun String.toDoubleOrZero(): Double = this.toDoubleOrNull() ?: 0.0
@@ -91,6 +88,9 @@ class HomeViewModel @Inject constructor(
 
     fun selectTab(tabIndex: Int) {
         _selectedTabIndex.value = tabIndex
+    }
+
+    fun filterList() {
         val filteredList =
             if (_selectedSymbol.value.isNullOrEmpty() || _selectedSymbol.value == context.getString(
                     R.string.allMarkets
@@ -101,219 +101,206 @@ class HomeViewModel @Inject constructor(
                 _cryptoList.value.filter { it.surname == _selectedSymbol.value }
             }
 
-         when (tabIndex) {
-            0 -> {
-                _tab0.value =filteredList
-                    .reversed() // Gelen listeyi ters çevir
-                    .take(10)
-                //Log.d("TabFilter", "Tab 0 selected - Reversing list")
-                _filterCryptoList.value = _tab0.value
+
+
+        _tab0.value = filteredList
+            .reversed() // Gelen listeyi ters çevir
+            .take(10)
+        //Log.d("TabFilter", "Tab 0 selected - Reversing list")
+        _filterCryptoList.value = _tab0.value
+
+
+        //Log.d("TabFilter", "Tab 1 selected - Sorting by priceChangePercent descending")
+        _tab1.value = filteredList
+            .sortedByDescending { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            .take(10)
+            .also { sortedList ->
+                sortedList.forEach { item ->
+                    //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
+                }
             }
+        _filterCryptoList.value = _tab1.value
 
-            1 -> {
-                //Log.d("TabFilter", "Tab 1 selected - Sorting by priceChangePercent descending")
-                _tab1.value=filteredList
-                    .sortedByDescending { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
-                    .take(10)
-                    .also { sortedList ->
-                        sortedList.forEach { item ->
-                            //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
-                        }
-                    }
-                _filterCryptoList.value = _tab1.value
+
+        //Log.d("TabFilter", "Tab 2 selected - Sorting by priceChangePercent ascending")
+        _tab2.value = filteredList
+            .sortedBy { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            .take(10)
+            .also { sortedList ->
+                sortedList.forEach { item ->
+                    //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
+                }
             }
-
-            2 -> {
-                //Log.d("TabFilter", "Tab 2 selected - Sorting by priceChangePercent ascending")
-                _tab2.value=filteredList
-                    .sortedBy { it.priceChangePercent.replace(",", ".").toDoubleOrNull() ?: 0.0 }
-                    .take(10)
-                    .also { sortedList ->
-                        sortedList.forEach { item ->
-                            //Log.d("TabFilter", "Sorted Item symbol: ${item.symbol}, priceChangePercent: ${item.priceChangePercent}")
-                        }
-                    }
-                _filterCryptoList.value = _tab2.value
-            }
-
-            3 -> {
-                //Log.d("TabFilter", "Tab 3 selected - Sorting by lastPrice descending")
-                _tab3.value=filteredList
-                    .sortedByDescending { it.lastPrice.replace(",", ".").toDoubleOrNull() ?: 0.0 }
-                    .take(10)
-                _filterCryptoList.value = _tab3.value
-            }
-
-            4 -> {
-                //Log.d("TabFilter", "Tab 4 selected - Sorting by volume descending")
-                _tab4.value=filteredList
-                    .sortedByDescending { it.volume.replace(",", ".").toDoubleOrZero() }
-                    .take(10)
-                _filterCryptoList.value = _tab4.value
-            }
-
-            else -> {
-                //Log.d("TabFilter", "Unknown tab index selected")
-                filteredList
-            }
-        }
+        _filterCryptoList.value = _tab2.value
 
 
+        //Log.d("TabFilter", "Tab 3 selected - Sorting by lastPrice descending")
+        _tab3.value = filteredList
+            .sortedByDescending { it.lastPrice.replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            .take(10)
+        _filterCryptoList.value = _tab3.value
 
 
+        //Log.d("TabFilter", "Tab 4 selected - Sorting by volume descending")
+        _tab4.value = filteredList
+            .sortedByDescending { it.volume.replace(",", ".").toDoubleOrZero() }
+            .take(10)
+        _filterCryptoList.value = _tab4.value
 
     }
 
 
-    fun refresh() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                loadCrpyots()
+fun refresh() {
+    viewModelScope.launch {
+        _isLoading.value = true
+        try {
+            loadCrpyots()
+            selectTab(_selectedTabIndex.value)
+            filterList()
+        } catch (e: Exception) {
+            _errorMessage.value = e.message ?: "An error occurred"
+        } finally {
+            _isLoading.value = false
+        }
+    }
+}
+
+fun loadCrpyots() {
+    viewModelScope.launch {
+        _isLoading.value = true
+        val result = repository.getCryptoList24hr()
+
+        when (result) {
+            is Resource.Success -> {
+                val cryptoItems = result.data!!.map { item ->
+                    // Varsayılan olarak surname ve name ayarla
+                    var name = item.symbol
+                    var surname = ""
+
+                    // Surname olarak ayırmak istediğimiz listeyi kullanarak ayrıştırma yapıyoruz
+                    getBtcSymbols(context = context).findLast { item.symbol.endsWith(it) }
+                        ?.let { potentialSurname ->
+                            surname = potentialSurname
+                            name = item.symbol.removeSuffix(potentialSurname)
+                        }
+
+
+                    val priceChangePercent = item.priceChangePercent.toFloatOrNull() ?: 0f
+                    val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
+
+                    CryptoItem(
+                        surname = surname,
+                        name = name,
+                        symbol = item.symbol,
+                        lastPrice = removeTrailingZeros(item.lastPrice),
+                        askPrice = item.askPrice,
+                        askQty = item.askQty,
+                        bidPrice = item.bidPrice,
+                        bidQty = item.bidQty,
+                        closeTime = item.closeTime,
+                        count = item.count,
+                        firstId = item.firstId,
+                        highPrice = item.highPrice,
+                        lastId = item.lastId,
+                        lastQty = item.lastQty,
+                        lowPrice = item.lowPrice,
+                        openPrice = item.openPrice,
+                        openTime = item.openTime,
+                        prevClosePrice = item.prevClosePrice,
+                        priceChange = item.priceChange,
+                        priceChangePercent = formattedPriceChangePercent,
+                        quoteVolume = item.quoteVolume,
+                        volume = item.volume,
+                        weightedAvgPrice = item.weightedAvgPrice
+                    )
+                }
+
+                // Arama başlamışsa, listeyi güncelle
+                if (isSearchStarting) {
+                    initialCryptoList = cryptoItems
+                    _cryptoList.value = initialCryptoList
+                    isSearchStarting = false
+                } else {
+                    _cryptoList.value = applySearchFilter(cryptoItems)
+                }
+
+                _errorMessage.value = ""
+                _isLoading.value = false
                 selectTab(_selectedTabIndex.value)
-            } catch (e: Exception) {
-                _errorMessage.value = e.message ?: "An error occurred"
-            } finally {
+                filterList()
+
+                _toastMessage.value =
+                    "Veriler başarıyla güncellendi." // Başarı durumunda mesajı ayarla
+
+            }
+
+            is Resource.Error -> {
+                _errorMessage.value = result.message!!
                 _isLoading.value = false
             }
-        }
-    }
 
-    fun loadCrpyots() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val result = repository.getCryptoList24hr()
-
-            when (result) {
-                is Resource.Success -> {
-                    val cryptoItems = result.data!!.map { item ->
-                        // Varsayılan olarak surname ve name ayarla
-                        var name = item.symbol
-                        var surname = ""
-
-                        // Surname olarak ayırmak istediğimiz listeyi kullanarak ayrıştırma yapıyoruz
-                        getBtcSymbols(context = context).findLast { item.symbol.endsWith(it) }
-                            ?.let { potentialSurname ->
-                                surname = potentialSurname
-                                name = item.symbol.removeSuffix(potentialSurname)
-                            }
-
-
-                        val priceChangePercent = item.priceChangePercent.toFloatOrNull() ?: 0f
-                        val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
-
-                        CryptoItem(
-                            surname = surname,
-                            name = name,
-                            symbol = item.symbol,
-                            lastPrice = removeTrailingZeros(item.lastPrice),
-                            askPrice = item.askPrice,
-                            askQty = item.askQty,
-                            bidPrice = item.bidPrice,
-                            bidQty = item.bidQty,
-                            closeTime = item.closeTime,
-                            count = item.count,
-                            firstId = item.firstId,
-                            highPrice = item.highPrice,
-                            lastId = item.lastId,
-                            lastQty = item.lastQty,
-                            lowPrice = item.lowPrice,
-                            openPrice = item.openPrice,
-                            openTime = item.openTime,
-                            prevClosePrice = item.prevClosePrice,
-                            priceChange = item.priceChange,
-                            priceChangePercent = formattedPriceChangePercent,
-                            quoteVolume = item.quoteVolume,
-                            volume = item.volume,
-                            weightedAvgPrice = item.weightedAvgPrice
-                        )
-                    }
-
-                    // Arama başlamışsa, listeyi güncelle
-                    if (isSearchStarting) {
-                        initialCryptoList = cryptoItems
-                        _cryptoList.value = initialCryptoList
-                        isSearchStarting = false
-                    } else {
-                        _cryptoList.value = applySearchFilter(cryptoItems)
-                    }
-
-                    _errorMessage.value = ""
-                    _isLoading.value = false
-                    selectTab(_selectedTabIndex.value)
-
-                    _toastMessage.value =
-                        "Veriler başarıyla güncellendi." // Başarı durumunda mesajı ayarla
-
-                }
-
-                is Resource.Error -> {
-                    _errorMessage.value = result.message!!
-                    _isLoading.value = false
-                }
-
-                is Resource.Loading -> {
-                    _isLoading.value = true
-                }
+            is Resource.Loading -> {
+                _isLoading.value = true
             }
         }
     }
+}
 
-    fun clearToastMessage() {
-        _toastMessage.value = null
+fun clearToastMessage() {
+    _toastMessage.value = null
+}
+
+private fun applySearchFilter(cryptoItems: List<CryptoItem>): List<CryptoItem> {
+    val currentQuery = _searchQuery.value
+    return if (currentQuery.isEmpty()) {
+        cryptoItems
+    } else {
+        cryptoItems.filter { it.symbol.contains(currentQuery.trim(), ignoreCase = true) }
     }
+}
 
-    private fun applySearchFilter(cryptoItems: List<CryptoItem>): List<CryptoItem> {
-        val currentQuery = _searchQuery.value
-        return if (currentQuery.isEmpty()) {
-            cryptoItems
+fun searchCryptoList(query: String) {
+    viewModelScope.launch(Dispatchers.Default) {
+        _searchQuery.value = query
+        if (query.isEmpty()) {
+            _cryptoList.value = initialCryptoList
+            isSearchStarting = true
         } else {
-            cryptoItems.filter { it.symbol.contains(currentQuery.trim(), ignoreCase = true) }
-        }
-    }
-
-    fun searchCryptoList(query: String) {
-        viewModelScope.launch(Dispatchers.Default) {
-            _searchQuery.value = query
-            if (query.isEmpty()) {
-                _cryptoList.value = initialCryptoList
-                isSearchStarting = true
-            } else {
-                if (isSearchStarting) {
-                    initialCryptoList = _cryptoList.value.toList()
-                    isSearchStarting = false
-                }
-
-                val result = initialCryptoList.filter {
-                    it.symbol.contains(query.trim(), ignoreCase = true)
-                }
-                _cryptoList.value = result
+            if (isSearchStarting) {
+                initialCryptoList = _cryptoList.value.toList()
+                isSearchStarting = false
             }
 
-            // Arama sorgusunu kaydet
+            val result = initialCryptoList.filter {
+                it.symbol.contains(query.trim(), ignoreCase = true)
+            }
+            _cryptoList.value = result
         }
-    }
 
-    private fun loadSearchQueries() {
-        viewModelScope.launch {
-            _searchQueryList.value = repository.getSearchQuery()
-        }
+        // Arama sorgusunu kaydet
     }
+}
 
-    fun saveSearchQuery(query: String) {
-        viewModelScope.launch {
-            repository.deleteSearchQueryByQuery(query)
-            repository.insertSearchQuery(SearchQuery(query = query))
-            loadSearchQueries()
-        }
+private fun loadSearchQueries() {
+    viewModelScope.launch {
+        _searchQueryList.value = repository.getSearchQuery()
     }
+}
 
-    fun deleteSearchQuery(query: SearchQuery) {
-        viewModelScope.launch {
-            repository.deleteSearchQuery(query)
-            loadSearchQueries()
-        }
+fun saveSearchQuery(query: String) {
+    viewModelScope.launch {
+        repository.deleteSearchQueryByQuery(query)
+        repository.insertSearchQuery(SearchQuery(query = query))
+        loadSearchQueries()
     }
+}
+
+fun deleteSearchQuery(query: SearchQuery) {
+    viewModelScope.launch {
+        repository.deleteSearchQuery(query)
+        loadSearchQueries()
+    }
+}
 
 
 }

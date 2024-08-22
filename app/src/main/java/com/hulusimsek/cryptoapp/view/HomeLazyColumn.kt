@@ -44,103 +44,97 @@ fun HomeLazyColumn(
     showDialog: MutableState<Boolean>,
     viewModel: HomeViewModel
 ) {
-    LazyColumn(contentPadding = PaddingValues(5.dp)) {
-        item {
-            Row(
+    // Box, LazyColumn ve diğer içeriklerin yerleştirileceği ana bileşen
+    Box(modifier = Modifier.fillMaxSize()) {
+        // LazyColumn'ı ekranın üst kısmına yerleştir
+        LazyColumn(contentPadding = PaddingValues(5.dp)) {
+            if (!isLoading) {
+                item {
+                    // Başlık ve simge gösterimi
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clickable { showDialog.value = true }
+                                .padding(horizontal = 8.dp), // Yalnızca yatay padding ekleyin
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            Text(
+                                text = selectedSymbol ?: "Seçiniz",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                ),
+                                modifier = Modifier
+                                    .align(Alignment.CenterVertically)
+                                    .padding(start = 24.dp)
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.ArrowDropDown,
+                                contentDescription = stringResource(R.string.allMarkets),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .align(Alignment.CenterVertically)
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = stringResource(R.string.price),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                ),
+                                modifier = Modifier.padding(end = 16.dp),
+                                textAlign = TextAlign.End
+                            )
+                            Text(
+                                text = stringResource(R.string.price_change_24h),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                ),
+                                modifier = Modifier.padding(end = 48.dp),
+                                textAlign = TextAlign.End
+                            )
+                        }
+                    }
+                }
+
+                // Liste elemanlarını render et
+                items(if (searchQuery.isEmpty()) filterCryptoList else cryptoList) { crypto ->
+                    CryptoRow(navController = navController, crypto = crypto)
+                }
+            }
+        }
+
+        // Loading ve hata durumlarını ortada göster
+        if (isLoading || errorMessage.isNotEmpty()) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(16.dp), // Biraz boşluk bırak
+                contentAlignment = Alignment.Center
             ) {
-                // Seçim yapma ve simge göstergesi
-                Row(
-                    modifier = Modifier
-                        .clickable { showDialog.value = true }
-                        .weight(1f)
-                        .padding(horizontal = 8.dp), // Yalnızca yatay padding ekleyin
-                    verticalAlignment = Alignment.CenterVertically, // Dikey hizalama merkez
-                    horizontalArrangement = Arrangement.Start // Yatay hizalama merkez
-                ) {
-                    Text(
-                        text = selectedSymbol ?: "Seçiniz",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        ),
-                        modifier = Modifier
-                            .align(Alignment.CenterVertically)
-                            .padding(start = 24.dp) // Dikey hizalamayı sağla
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = stringResource(R.string.allMarkets),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .align(Alignment.CenterVertically) // Dikey hizalamayı sağla
-                    )
+                when {
+                    isLoading -> CircularProgressIndicator(color = BlueMunsell)
+                    errorMessage.isNotEmpty() -> RetryView(error = errorMessage) {
+                        viewModel.refresh()
+                    }
                 }
-
-                // Fiyat ve 24s Değişim başlıkları
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(2f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.price),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        ),
-                        modifier = Modifier.padding(end = 16.dp),
-                        textAlign = TextAlign.End
-                    )
-                    Text(
-                        text = stringResource(R.string.price_change_24h),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        ),
-                        modifier = Modifier.padding(end = 48.dp),
-
-                        textAlign = TextAlign.End
-                    )
-                }
-            }
-
-        }
-
-
-
-
-
-
-
-
-        if (searchQuery.isEmpty()) {
-            items(filterCryptoList) { crypto ->
-                CryptoRow(navController = navController, crypto = crypto)
-            }
-        } else {
-            items(cryptoList) { crypto ->
-                CryptoRow(navController = navController, crypto = crypto)
-            }
-        }
-
-    }
-
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (isLoading) {
-            CircularProgressIndicator(color = BlueMunsell)
-        }
-        if (errorMessage.isNotEmpty()) {
-            RetryView(error = errorMessage) {
-                viewModel.refresh()
             }
         }
     }
