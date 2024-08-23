@@ -115,7 +115,9 @@ fun HomeLazyColumn(
                 }
 
                 // Liste elemanlarını render et
-                items(if (searchQuery.isEmpty()) filterCryptoList else cryptoList) { crypto ->
+                items(if (searchQuery.isEmpty()) filterCryptoList else cryptoList, key = {
+                    it.symbol
+                }) { crypto ->
                     CryptoRow(navController = navController, crypto = crypto)
                 }
             }

@@ -143,6 +143,7 @@ fun HomeScreen(
                         onSearchQuery = { query ->
                             viewModel.searchCryptoList(query)
                         },
+                        viewModel = viewModel,
                         modifier = Modifier
                             .padding(horizontal = if (isSearchBarExpanded) 0.dp else 16.dp)
                             .fillMaxWidth(),
@@ -301,7 +302,7 @@ fun MarketSelectionDialog(
 fun SearchBar(
     modifier: Modifier = Modifier,
     onActiveChange: (Boolean) -> Unit = {},
-    viewModel: HomeViewModel = hiltViewModel(),
+    viewModel: HomeViewModel,
     onSearchQuery: (String) -> Unit = {}
 ) {
     var text by remember { mutableStateOf("") }
