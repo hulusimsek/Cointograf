@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import com.hulusimsek.cryptoapp.R
 import com.hulusimsek.cryptoapp.view.navbar.NavItem
 import com.hulusimsek.cryptoapp.view.navbar.NavPath
+import com.hulusimsek.cryptoapp.viewmodel.HomeViewModel
 import com.hulusimsek.cryptoapp.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -32,6 +33,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PagerWithNavHost(
     navController: NavHostController,
+    homeViewModel: HomeViewModel,
     viewModel: MainViewModel = hiltViewModel()// ViewModel'inizi burada tanımlayın
 ) {
     val pagerState = rememberPagerState(pageCount = { 4 })
@@ -88,7 +90,7 @@ fun PagerWithNavHost(
                     startDestination = "crypto_list_screen"
                 ) {
                     composable("crypto_list_screen") {
-                        HomeScreen(navController = navController)
+                        HomeScreen(navController = navController,homeViewModel)
                     }
                     composable("crypto_detail_screen/{cryptoId}") {
                         val cryptoId = it.arguments?.getString("cryptoId") ?: ""
@@ -101,7 +103,7 @@ fun PagerWithNavHost(
                     startDestination = "crypto_list_screen"
                 ) {
                     composable("crypto_list_screen") {
-                        HomeScreen(navController = navController)
+                        HomeScreen(navController = navController,homeViewModel)
                     }
                     composable("crypto_detail_screen/{cryptoId}") {
                         val cryptoId = it.arguments?.getString("cryptoId") ?: ""

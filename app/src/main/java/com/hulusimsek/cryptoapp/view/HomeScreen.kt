@@ -52,66 +52,56 @@ import androidx.compose.runtime.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.pagerTabIndicatorOffset
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hulusimsek.cryptoapp.model.CryptoItem
 import com.hulusimsek.cryptoapp.ui.theme.BlueMunsell
 import com.hulusimsek.cryptoapp.ui.theme.dusenKirmizi
 import com.hulusimsek.cryptoapp.ui.theme.yukselenYesil
 import com.hulusimsek.cryptoapp.util.Constants.getBtcSymbols
 import com.hulusimsek.cryptoapp.viewmodel.MainViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalPagerApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel(),
+    viewModel: HomeViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val toastMessage by viewModel.toastMessage.collectAsState()
-    val selectedTabIndex by viewModel.selectedTabIndex.collectAsState()
-    val filterCryptoList by viewModel.filterCryptoList.collectAsState()
-    val cryptoList by viewModel.cryptoList.collectAsState()
+    val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
+    val selectedTabIndex by viewModel.selectedTabIndex.collectAsStateWithLifecycle()
+    val filterCryptoList by viewModel.filterCryptoList.collectAsStateWithLifecycle()
+    val cryptoList by viewModel.cryptoList.collectAsStateWithLifecycle()
 
-    val tab0 by viewModel.tab0.collectAsState()
-    val tab1 by viewModel.tab1.collectAsState()
-    val tab2 by viewModel.tab2.collectAsState()
-    val tab3 by viewModel.tab3.collectAsState()
-    val tab4 by viewModel.tab4.collectAsState()
+    val tab0 by viewModel.tab0.collectAsStateWithLifecycle()
+    val tab1 by viewModel.tab1.collectAsStateWithLifecycle()
+    val tab2 by viewModel.tab2.collectAsStateWithLifecycle()
+    val tab3 by viewModel.tab3.collectAsStateWithLifecycle()
+    val tab4 by viewModel.tab4.collectAsStateWithLifecycle()
 
-    val selectedSymbol by viewModel.selectedSymbol.collectAsState()
+    val selectedSymbol by viewModel.selectedSymbol.collectAsStateWithLifecycle()
     val showDialog = remember { mutableStateOf(false) }
-    val pagerState = rememberPagerState(pageCount = { 5 }) // 5 sayfa için ayarlandı
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = {5})
 
-    val isLoading by viewModel.isLoading.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
-    val errorMessage by viewModel.errorMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(toastMessage) {
@@ -119,18 +109,6 @@ fun HomeScreen(
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearToastMessage()
         }
-    }
-
-    LaunchedEffect(showDialog.value) {
-        viewModel.selectTab(selectedTabIndex)
-    }
-
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }
-            .distinctUntilChanged() // Aynı sayfaya tekrar geçiş yapılırsa gereksiz güncellemeyi engeller
-            .collect { page ->
-                viewModel.selectTab(page)
-            }
     }
 
     var isSearchBarExpanded by remember { mutableStateOf(false) }
@@ -159,7 +137,7 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .animateContentSize() // İçerik boyutunu animasyonla değiştir
+                        .animateContentSize() // Animate size changes smoothly
                 ) {
                     SearchBar(
                         onSearchQuery = { query ->
@@ -177,80 +155,41 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 ScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    edgePadding = 0.dp, // Kenar boşluklarını sıfırladık
+                    selectedTabIndex = pagerState.currentPage,
+                    edgePadding = 0.dp,
                     indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            Modifier
-                                .tabIndicatorOffset(tabPositions[selectedTabIndex])
-                                .padding(0.dp)
+                        TabRowDefaults.Indicator(
+                            Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage])
                         )
                     },
                     modifier = Modifier.padding(horizontal = 0.dp)
                 ) {
-                    Tab(
-                        text = { Text(stringResource(R.string.newListings)) },
-                        selected = selectedTabIndex == 0,
-                        onClick = {
-                            viewModel.selectTab(0) // Tab seçimi değiştiğinde sıralamayı güncelle
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(0)
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-                    )
-                    Tab(
-                        text = { Text(stringResource(R.string.gainers)) },
-                        selected = selectedTabIndex == 1,
-                        onClick = {
-                            viewModel.selectTab(1) // Tab seçimi değiştiğinde sıralamayı güncelle
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(1)
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-                    )
-                    Tab(
-                        text = { Text(stringResource(R.string.losers)) },
-                        selected = selectedTabIndex == 2,
-                        onClick = {
-                            viewModel.selectTab(2) // Tab seçimi değiştiğinde sıralamayı güncelle
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(2)
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-                    )
-                    Tab(
-                        text = { Text(stringResource(R.string.marketCap)) },
-                        selected = selectedTabIndex == 3,
-                        onClick = {
-                            viewModel.selectTab(3) // Tab seçimi değiştiğinde sıralamayı güncelle
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(3)
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-                    )
-                    Tab(
-                        text = { Text(stringResource(R.string.volume24h)) },
-                        selected = selectedTabIndex == 4,
-                        onClick = {
-                            viewModel.selectTab(4) // Tab seçimi değiştiğinde sıralamayı güncelle
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(4)
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 2.dp) // Tab'lar arasındaki boşluğu azaltma
-                    )
+                    listOf(
+                        stringResource(R.string.newListings),
+                        stringResource(R.string.gainers),
+                        stringResource(R.string.losers),
+                        stringResource(R.string.marketCap),
+                        stringResource(R.string.volume24h)
+                    ).forEachIndexed { index, title ->
+                        Tab(
+                            text = { Text(title) },
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                    viewModel.selectTab(index)
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    key = { page -> page } // Pager'da her sayfanın anahtarını belirleyin
+                    modifier = Modifier.fillMaxSize()
                 ) { page ->
                     val tabCryptoList = when (page) {
                         0 -> tab0
@@ -298,7 +237,7 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     viewModel.selectSymbol(symbol)
-                                    viewModel.selectTab(selectedTabIndex)
+                                    viewModel.selectTab(pagerState.currentPage)
                                     viewModel.filterList()
                                     showDialog.value = false
                                 }) {
@@ -585,7 +524,7 @@ fun CryptoList(navController: NavController, viewModel: HomeViewModel = hiltView
         }
         if (errorMessage.isNotEmpty()) {
             RetryView(error = errorMessage) {
-                viewModel.loadCrpyots()
+                viewModel.loadCryptos()
             }
         }
     }

@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.lifecycle.runtime.compose.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -131,5 +132,7 @@ dependencies {
     implementation ("com.github.skydoves:landscapist:1.4.5")
     implementation ("androidx.compose.material:material:1.1.1")
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.24.13-rc")
+
+    implementation("androidx.core:core-splashscreen:1.2.0-alpha01")
 
 }

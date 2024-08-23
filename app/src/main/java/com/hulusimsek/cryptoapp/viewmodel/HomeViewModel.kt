@@ -1,7 +1,6 @@
 package com.hulusimsek.cryptoapp.viewmodel
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hulusimsek.cryptoapp.R
@@ -73,12 +72,6 @@ class HomeViewModel @Inject constructor(
     private val _searchQueryList = MutableStateFlow<List<SearchQuery>>(listOf())
     val searchQueryList: StateFlow<List<SearchQuery>> = _searchQueryList
 
-    init {
-        loadCrpyots()
-        loadSearchQueries()
-
-
-    }
 
     fun String.toDoubleOrZero(): Double = this.toDoubleOrNull() ?: 0.0
 
@@ -154,7 +147,7 @@ fun refresh() {
     viewModelScope.launch {
         _isLoading.value = true
         try {
-            loadCrpyots()
+            loadCryptos()
             selectTab(_selectedTabIndex.value)
             filterList()
         } catch (e: Exception) {
@@ -165,7 +158,7 @@ fun refresh() {
     }
 }
 
-fun loadCrpyots() {
+fun loadCryptos() {
     viewModelScope.launch {
         _isLoading.value = true
         val result = repository.getCryptoList24hr()
@@ -225,10 +218,9 @@ fun loadCrpyots() {
                 }
 
                 _errorMessage.value = ""
-                _isLoading.value = false
-                selectTab(_selectedTabIndex.value)
                 filterList()
 
+                selectTab(_selectedTabIndex.value)
                 _toastMessage.value =
                     "Veriler başarıyla güncellendi." // Başarı durumunda mesajı ayarla
 
@@ -242,7 +234,9 @@ fun loadCrpyots() {
             is Resource.Loading -> {
                 _isLoading.value = true
             }
+
         }
+        _isLoading.value = false
     }
 }
 
@@ -281,7 +275,7 @@ fun searchCryptoList(query: String) {
     }
 }
 
-private fun loadSearchQueries() {
+fun loadSearchQueries() {
     viewModelScope.launch {
         _searchQueryList.value = repository.getSearchQuery()
     }
