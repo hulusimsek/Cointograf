@@ -17,34 +17,30 @@ class MainViewModel @Inject constructor(
     private val _currentPage = MutableStateFlow(0) // Mevcut sayfayı yönet
     val currentPage: StateFlow<Int> get() = _currentPage
 
-    private val _selectedCoinId = MutableStateFlow<String?>(null)
-    val selectedCoinId: StateFlow<String?> get() = _selectedCoinId
-
-    fun selectCoin(coinId: String) {
-        _selectedCoinId.value = coinId
-        // Sayfa geçişini yap
-        goToDetailPage()
+    // Event işleme fonksiyonu
+    fun onEvent(event: MainEvent) {
+        when (event) {
+            is MainEvent.GoToPage -> goToPage(event.page)
+            MainEvent.NextPage -> {
+                if (currentPage.value < pageCount.value - 1) {
+                    setCurrentPage(currentPage.value + 1)
+                }
+            }
+            MainEvent.PreviousPage -> {
+                if (currentPage.value > 0) {
+                    setCurrentPage(currentPage.value - 1)
+                }
+            }
+        }
     }
 
-    private fun goToDetailPage() {
-        _currentPage.value = 1 // Detay sayfasının indexi (örneğin, 1)
-    }
-
-
-
-
-    fun setPageCount(count: Int) {
-        _pageCount.value = count
-    }
-
-    fun setCurrentPage(page: Int) {
+    private fun setCurrentPage(page: Int) {
         _currentPage.value = page
     }
 
-    fun goToPage(page: Int) {
+    private fun goToPage(page: Int) {
         if (page in 0 until pageCount.value) {
             setCurrentPage(page)
         }
     }
-
 }

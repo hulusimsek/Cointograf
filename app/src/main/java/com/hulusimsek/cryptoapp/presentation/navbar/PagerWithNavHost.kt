@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import com.hulusimsek.cryptoapp.R
 import com.hulusimsek.cryptoapp.presentation.home_screen.HomeViewModel
 import com.hulusimsek.cryptoapp.presentation.home_screen.views.HomeScreen
+import com.hulusimsek.cryptoapp.presentation.main_activity.MainEvent
 import com.hulusimsek.cryptoapp.presentation.main_activity.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -60,7 +61,7 @@ fun PagerWithNavHost(
                         label = { Text(item.title) },
                         selected = currentPage == index,
                         onClick = {
-                            viewModel.goToPage(index)
+                            viewModel.onEvent(MainEvent.GoToPage(index))
                             coroutineScope.launch {
                                 pagerState.animateScrollToPage(index)
                                 // Ana sayfayı göstermek için mevcut sayfa yığını temizlenir

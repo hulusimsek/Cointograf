@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CryptoApp"
+rootProject.name = "Cointograf"
 include(":app")
  
