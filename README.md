@@ -1,4 +1,4 @@
-# CryptoApp
+# Cointograf
 
 CryptoApp is a mobile application that allows users to view and search for various cryptocurrency details. Designed for those who want to keep track of the latest price changes and details in the cryptocurrency market.
 
