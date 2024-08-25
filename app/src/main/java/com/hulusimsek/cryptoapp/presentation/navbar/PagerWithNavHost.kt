@@ -79,6 +79,7 @@ fun PagerWithNavHost(
         }
     ) { innerPadding ->
         HorizontalPager(
+            userScrollEnabled = false,
             state = pagerState,
             modifier = Modifier
                 .fillMaxSize()

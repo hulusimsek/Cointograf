@@ -43,6 +43,8 @@ class GetCryptosUseCase @Inject constructor(
                         val priceChangePercent = item.priceChangePercent.toFloatOrNull() ?: 0f
                         val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
 
+
+
                         CryptoItem(
                             surname = surname,
                             name = name,

@@ -3,13 +3,18 @@ package com.hulusimsek.cryptoapp.util
 import android.content.Context
 import com.hulusimsek.cryptoapp.R
 import java.math.BigDecimal
+import java.text.DecimalFormat
 
 object Constants {
     const val BASE_URL = "https://data-api.binance.vision"
 
     fun removeTrailingZeros(value: String): String {
         val bigDecimal = BigDecimal(value).stripTrailingZeros()
-        return bigDecimal.toPlainString()
+
+        val formatter = DecimalFormat("#,###.################")
+        val formattedPriceChangePercent = formatter.format(bigDecimal)
+
+        return formattedPriceChangePercent.toString()
     }
 
 

@@ -6,6 +6,7 @@ import com.hulusimsek.cryptoapp.data.remote.dto.CryptoItem
 import com.hulusimsek.cryptoapp.data.remote.dto.CryptoList
 import com.hulusimsek.cryptoapp.data.database.dao.CryptoDao
 import com.hulusimsek.cryptoapp.data.remote.CryptoAPI
+import com.hulusimsek.cryptoapp.data.remote.dto.Klines
 import com.hulusimsek.cryptoapp.domain.repository.CryptoRepository
 import com.hulusimsek.cryptoapp.util.Resource
 import javax.inject.Inject
@@ -31,7 +32,7 @@ class CryptoRepositoryImp @Inject constructor(
         return cryptoDao.getAllQueries()
     }
 
-    override suspend fun getCryptoList() : Resource<CryptoList> {
+    override suspend fun getCryptoList(): Resource<CryptoList> {
         val response = try {
             api.getCryptoList()
         } catch (e: Exception) {
@@ -45,8 +46,13 @@ class CryptoRepositoryImp @Inject constructor(
         return api.getCrypto(id)
     }
 
-    override suspend fun getCryptoList24hr(): Crypto{
-        return api.getCryptoList24hr()    }
+    override suspend fun getCryptoList24hr(): Crypto {
+        return api.getCryptoList24hr()
+    }
+
+    override suspend fun getKlines(id: String, interval: String): Klines {
+        return api.getKlines(id, interval)
+    }
 
 
 }

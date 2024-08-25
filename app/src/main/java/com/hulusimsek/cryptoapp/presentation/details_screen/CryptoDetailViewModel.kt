@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hulusimsek.cryptoapp.data.remote.dto.CryptoItem
 import com.hulusimsek.cryptoapp.domain.use_case.get_crypto_details_use_case.GetCryptoDetailsUseCase
+import com.hulusimsek.cryptoapp.domain.use_case.get_klines_use_case.GetKlinesUseCase
 import com.hulusimsek.cryptoapp.presentation.home_screen.CryptosEvent
 import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
 import com.hulusimsek.cryptoapp.util.Resource
@@ -19,13 +20,19 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CryptoDetailViewModel @Inject constructor(
-    private val getCryptoDetailsUseCase: GetCryptoDetailsUseCase
+    private val getCryptoDetailsUseCase: GetCryptoDetailsUseCase,
+    private val getKlinesUseCase: GetKlinesUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<CoinDetailState>(CoinDetailState())
     val state: StateFlow<CoinDetailState> = _state
 
+    private val _interval = MutableStateFlow<String>("1h")
+    val interval: StateFlow<String> = _interval
+
     private var job: Job? = null
+    private var job2: Job? = null
+
 
     private fun refresh() {
         val cryptoSymbol = _state.value.currentCrypto
@@ -45,6 +52,8 @@ class CryptoDetailViewModel @Inject constructor(
     }
 
     private fun loadCryptoDetails(cryptoSymbol: String) {
+
+        _state.value = _state.value.copy(currentCrypto = cryptoSymbol)
         job?.cancel()
 
 
@@ -55,7 +64,7 @@ class CryptoDetailViewModel @Inject constructor(
                         coin = it.data,
                         currentCrypto = cryptoSymbol
                     )
-
+                    fetchKlinesData()
                 }
 
                 is Resource.Error -> {
@@ -76,6 +85,33 @@ class CryptoDetailViewModel @Inject constructor(
         _state.value = _state.value.copy(
             toastMessage = null,
         )
+    }
+
+    private fun fetchKlinesData() {
+        job2?.cancel()
+
+
+        job2 = getKlinesUseCase.executeGetKlines(_state.value.currentCrypto ?: "", _interval.value).onEach {
+            when (it) {
+                is Resource.Success -> {
+                    _state.value = _state.value.copy(
+                        klines = it.data,
+                        isLoading = false
+                    )
+                }
+
+                is Resource.Error -> {
+                    _state.value = _state.value.copy(klinesError = it.message ?: "Error!", toastMessage = it.message, isLoading = false)
+
+                }
+
+                is Resource.Loading -> {
+                    _state.value = _state.value.copy(isLoading = true)
+                }
+            }
+
+
+        }.launchIn(viewModelScope)
     }
 
     fun onEvent(event: CryptoDetailsEvent) {

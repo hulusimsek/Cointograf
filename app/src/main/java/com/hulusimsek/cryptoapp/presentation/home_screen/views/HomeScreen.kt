@@ -71,6 +71,7 @@ import com.hulusimsek.cryptoapp.presentation.theme.dusenKirmizi
 import com.hulusimsek.cryptoapp.presentation.theme.yukselenYesil
 import com.hulusimsek.cryptoapp.util.Constants.getBtcSymbols
 import com.hulusimsek.cryptoapp.presentation.main_activity.MainViewModel
+import com.hulusimsek.cryptoapp.presentation.util.RetryView
 import kotlinx.coroutines.launch
 
 
@@ -480,19 +481,5 @@ fun CryptoRow(
             )
         }
 
-    }
-}
-
-@Composable
-fun RetryView(
-    error: String,
-    onRetry: () -> Unit
-) {
-    Column {
-        Text(text = error, color = Color.Red, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(10.dp))
-        Button(onClick = { onRetry }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text(text = "Retry")
-        }
     }
 }

@@ -7,6 +7,7 @@ plugins {
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.10"
 }
 
 android {
@@ -134,5 +135,12 @@ dependencies {
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.24.13-rc")
 
     implementation("androidx.core:core-splashscreen:1.2.0-alpha01")
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+
+    implementation("com.github.patrykandpatrick:vico:1.0.0") // Versiyonu kontrol et
+
+
 
 }

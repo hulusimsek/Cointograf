@@ -88,8 +88,9 @@ object AppModule {
 
     @Provides
     fun provideGetCryptoDetailUseCase(
-        repository: CryptoRepository
+        repository: CryptoRepository,
+        context: Context
     ): GetCryptoDetailsUseCase {
-        return GetCryptoDetailsUseCase(repository)
+        return GetCryptoDetailsUseCase(repository,context)
     }
 }

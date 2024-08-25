@@ -20,7 +20,6 @@ fun PullToRefreshPage(
     // Pull-to-refresh durumu
     val pullToRefreshState = rememberPullToRefreshState()
     val contentModifier = Modifier
-        .fillMaxSize()
     if (pullToRefreshState.isRefreshing) {
         LaunchedEffect(true) {
             // fetch something

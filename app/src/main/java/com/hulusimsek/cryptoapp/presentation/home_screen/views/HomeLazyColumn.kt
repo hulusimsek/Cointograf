@@ -32,6 +32,7 @@ import com.hulusimsek.cryptoapp.data.remote.dto.CryptoItem
 import com.hulusimsek.cryptoapp.presentation.home_screen.CryptosEvent
 import com.hulusimsek.cryptoapp.presentation.theme.BlueMunsell
 import com.hulusimsek.cryptoapp.presentation.home_screen.HomeViewModel
+import com.hulusimsek.cryptoapp.presentation.util.RetryView
 
 @Composable
 fun HomeLazyColumn(

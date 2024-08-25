@@ -127,13 +127,13 @@ class HomeViewModel @Inject constructor(
 
         //Log.d("TabFilter", "Tab 3 selected - Sorting by lastPrice descending")
         _tab3.value = filteredList
-            .sortedByDescending { it.lastPrice.replace(",", ".").toDoubleOrNull() ?: 0.0 }
+            .sortedByDescending { it.lastPrice.replace(",", "").toDoubleOrNull() ?: 0.0 }
             .take(10)
 
 
         //Log.d("TabFilter", "Tab 4 selected - Sorting by volume descending")
         _tab4.value = filteredList
-            .sortedByDescending { it.volume.replace(",", ".").toDoubleOrZero() }
+            .sortedByDescending { it.quoteVolume.replace(",", ".").toDoubleOrZero() }
             .take(10)
 
     }
