@@ -213,7 +213,6 @@ fun CryptoDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(400.dp)
-                            .padding(16.dp)
                     ) {
                         if (state.klines != null) {
                             CandleStickChartView(
