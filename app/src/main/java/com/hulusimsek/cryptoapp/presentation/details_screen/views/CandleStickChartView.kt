@@ -1,5 +1,6 @@
 package com.hulusimsek.cryptoapp.presentation.details_screen.views
 
+import android.annotation.SuppressLint
 import android.graphics.Matrix
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
@@ -19,11 +20,23 @@ import kotlin.math.abs
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.animateZoomBy
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateRotation
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,11 +57,28 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.consumePositionChange
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChangeConsumed
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEach
+import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 
 @Composable
@@ -56,20 +86,9 @@ fun CandleStickChartView(
     klines: List<KlineModel>,
     modifier: Modifier = Modifier
 ) {
-    // Zoom, offset ve rotation durumlarını tanımla
     var scale by remember { mutableStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
-
-    val state = rememberTransformableState { zoomChange, offsetChange, rotationChange ->
-        val newScale = (scale * zoomChange).coerceIn(0.5f, 2.0f)
-        val scaleChange = newScale / scale
-        scale = newScale
-
-        offsetX += offsetChange.x * scaleChange
-        offsetY += offsetChange.y * scaleChange
-
-    }
 
     val density = LocalDensity.current.density
     val density2 = LocalDensity.current
@@ -78,10 +97,44 @@ fun CandleStickChartView(
     val candleSpacingDp = 4.dp
     val candleWidthPx = candleWidthDp.toPx(density)
     val candleSpacingPx = candleSpacingDp.toPx(density)
+    val canvasWidthPx = with(density2) { 300.dp.toPx() }
+    val canvasHeightPx = with(density2) { 400.dp.toPx() }
+
     val totalCandles = klines.size
 
-    // Başlangıçta son mumun görünmesini sağlamak için offsetX hesaplama
-    LaunchedEffect(klines) {
+    val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
+        val newScale = (scale * zoomChange).coerceIn(0.5f, 2.0f)
+        val scaleChange = newScale / scale
+        scale = newScale
+
+        // Yumuşatılmış kaydırma hesaplamaları
+        offsetX = (offsetX + offsetChange.x * scaleChange).coerceIn(
+            -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
+            0f
+        )
+        offsetY = (offsetY + offsetChange.y * scaleChange).coerceIn(
+            -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
+            0f
+        )
+    }
+
+    val dragModifier = Modifier.pointerInput(Unit) {
+        detectDragGestures { change, dragAmount ->
+            change.consume()
+
+            // Tek parmakla kaydırma işlemi
+            offsetX = (offsetX + dragAmount.x).coerceIn(
+                -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
+                0f
+            )
+            offsetY = (offsetY + dragAmount.y).coerceIn(
+                -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
+                0f
+            )
+        }
+    }
+
+    LaunchedEffect(scale, klines) {
         val canvasWidth = with(density2) { 300.dp.toPx() }
         val totalWidth = (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
         offsetX = -(totalWidth - canvasWidth).coerceAtLeast(0f)
@@ -93,7 +146,8 @@ fun CandleStickChartView(
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
             .border(2.dp, Color.Gray, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
-            .transformable(state = state)
+            .then(dragModifier) // Tek parmak kaydırma için
+            .transformable(state = transformableState) // Çift parmak zoom için
     ) {
         Canvas(
             modifier = Modifier.fillMaxSize()
@@ -101,44 +155,50 @@ fun CandleStickChartView(
             val canvasWidth = size.width
             val canvasHeight = size.height
 
-            // Toplam genişliği hesapla
             val totalWidth = (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
 
-            // Görüntülenebilir mumların sınırlarını belirle
             val fromIndex = ((-offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt().coerceAtLeast(0)
             val toIndex = ((canvasWidth - offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt() + fromIndex
 
-            // Ekranda görünmesi gereken mumları belirle
             val adjustedFromIndex = fromIndex.coerceAtLeast(0)
             val adjustedToIndex = minOf(adjustedFromIndex + (canvasWidth / (candleWidthPx * scale + candleSpacingPx)).toInt() + 1, totalCandles)
 
             if (adjustedFromIndex < adjustedToIndex && adjustedFromIndex < totalCandles) {
-                // Görüntülenen mumları al
                 val visibleKlines = klines.subList(adjustedFromIndex, adjustedToIndex)
 
                 val minLow = visibleKlines.minOfOrNull { it.lowPrice.toFloatOrNull() ?: Float.MAX_VALUE } ?: 0f
                 val maxHigh = visibleKlines.maxOfOrNull { it.highPrice.toFloatOrNull() ?: Float.MIN_VALUE } ?: 1f
                 val priceRange = maxHigh - minLow
 
-                // Mumları çiz
-                drawCandles(
-                    visibleKlines,
-                    candleWidthPx * scale,
-                    candleSpacingPx,
-                    canvasHeight,
-                    minLow,
-                    priceRange
-                )
+                if (priceRange > 0) {
+                    drawCandles(
+                        klines = visibleKlines,
+                        candleWidth = candleWidthPx * scale,
+                        candleSpacing = candleSpacingPx,
+                        canvasHeight = canvasHeight,
+                        minLow = minLow,
+                        priceRange = priceRange
+                    )
 
-                // Y eksenini güncelle
-                drawYLabels(minLow, maxHigh, priceRange, canvasHeight)
+                    drawYLabels(
+                        minLow = minLow,
+                        maxHigh = maxHigh,
+                        priceRange = priceRange,
+                        canvasHeight = canvasHeight
+                    )
 
-                // X eksenini güncelle
-                drawXLabels(visibleKlines, canvasWidth, candleWidthPx * scale, candleSpacingPx)
+                    drawXLabels(
+                        klines = visibleKlines,
+                        canvasWidth = canvasWidth,
+                        candleWidth = candleWidthPx * scale,
+                        candleSpacing = candleSpacingPx
+                    )
+                }
             }
         }
     }
 }
+
 
 // Mumlar çizim fonksiyonu
 private fun DrawScope.drawCandles(
@@ -183,7 +243,7 @@ private fun DrawScope.drawCandles(
 // Y ekseni etiketleri çizimi
 private fun DrawScope.drawYLabels(minLow: Float, maxHigh: Float, priceRange: Float, canvasHeight: Float) {
     val labelCount = 5
-    val formatter = DecimalFormat("#,###.##")
+    val formatter = DecimalFormat("#,###.################")
 
     for (i in 0 until labelCount) {
         val labelValue = minLow + (priceRange / (labelCount - 1)) * i
@@ -213,33 +273,40 @@ private fun DrawScope.drawXLabels(
 ) {
     val formatter = SimpleDateFormat("MM/dd", Locale.getDefault())
     val fontSize = 24f
+    val textPaint = Paint().apply {
+        color = Color.Gray.toArgb()
+        textSize = fontSize
+        textAlign = Paint.Align.CENTER
+    }
 
     klines.forEachIndexed { index, kline ->
-        val xPos = index * (candleWidth + candleSpacing)
+        val xPos = index * (candleWidth + candleSpacing) + candleWidth / 2
         val labelText = formatter.format(Date(kline.openTime))
 
+        // Y ekseninde bir kaydırma ekleyebilirsiniz
+        val yOffset = size.height - 20f
+
+        // Yüzeyi daha iyi konumlandırmak için bu değişiklikleri yapabilirsiniz
         drawContext.canvas.nativeCanvas.apply {
             val matrix = Matrix().apply {
-                setRotate(-90f, xPos, size.height - 20f)
-            }
-            val paint = Paint().apply {
-                color = Color.Gray.toArgb()
-                textSize = fontSize
-                textAlign = Paint.Align.CENTER
+                setRotate(-90f, xPos, yOffset)
             }
             drawText(
                 labelText,
                 xPos,
-                size.height - 20f,
-                paint
+                yOffset,
+                textPaint
             )
-            drawContext.canvas.nativeCanvas.concat(matrix)
         }
     }
 }
 
+
 // DP to PX dönüştürme fonksiyonu
 private fun Dp.toPx(density: Float): Float = this.value * density
+
+
+
 
 
 
