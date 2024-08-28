@@ -96,6 +96,7 @@ fun CandleStickChartView(
     var scale by remember { mutableStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
+
     var selectedCandleIndex by remember { mutableStateOf<Int?>(null) }
     var showPopup by remember { mutableStateOf(false) }
     var popupOffset by remember { mutableStateOf(Offset.Zero) }
@@ -103,10 +104,15 @@ fun CandleStickChartView(
     val density = LocalDensity.current.density
     val density2 = LocalDensity.current
 
+    var guideLineX by remember { mutableStateOf<Float?>(null) }
+    var guideLineY by remember { mutableStateOf<Float?>(null) }
+    var isGuideLine by remember { mutableStateOf(false) }
+
     val candleWidthDp = 8.dp
     val candleSpacingDp = 4.dp
     val candleWidthPx = candleWidthDp.toPx(density)
     val candleSpacingPx = candleSpacingDp.toPx(density)
+
     val canvasWidthPx = with(density2) { 300.dp.toPx() }
     val canvasHeightPx = with(density2) { 400.dp.toPx() }
 
@@ -117,40 +123,95 @@ fun CandleStickChartView(
         val scaleChange = newScale / scale
         scale = newScale
 
-        // Yumuşatılmış kaydırma hesaplamaları
-        val newOffsetX = (offsetX + offsetChange.x * scaleChange).checkRange(
+        // Kaydırma değerlerini güncelle
+        offsetX = (offsetX + offsetChange.x * scaleChange).checkRange(
             -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
             0f
         )
-        val newOffsetY = (offsetY + offsetChange.y * scaleChange).checkRange(
+        offsetY = (offsetY + offsetChange.y * scaleChange).checkRange(
             -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
             0f
         )
 
-        // Güncellenmiş offset'leri atayın
-        offsetX = newOffsetX
-        offsetY = newOffsetY
+        // Kılavuz çizgilerini güncelle
+        if (isGuideLine) {
+            guideLineX = guideLineX?.let { (it - offsetX) * scaleChange + offsetX }
+            guideLineY = guideLineY?.let { (it - offsetY) * scaleChange + offsetY }
+        }
     }
 
     val dragModifier = Modifier.pointerInput(Unit) {
         detectDragGestures { change, dragAmount ->
             change.consume()
 
-            // Tek parmakla kaydırma işlemi
-            val newOffsetX = (offsetX + dragAmount.x).checkRange(
+            offsetX = (offsetX + dragAmount.x).checkRange(
                 -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
                 0f
             )
-            val newOffsetY = (offsetY + dragAmount.y).checkRange(
+            offsetY = (offsetY + dragAmount.y).checkRange(
                 -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
                 0f
             )
 
-            // Güncellenmiş offset'leri atayın
-            offsetX = newOffsetX
-            offsetY = newOffsetY
+            if (!isGuideLine) {
+                guideLineX = null
+                guideLineY = null
+            }
         }
     }
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onLongPress = { offset ->
+                    if (!isGuideLine) {
+                        val transformedX = (offset.x - offsetX) / scale
+                        val candleIndex = (transformedX / (candleWidthPx + candleSpacingPx)).toInt().coerceIn(0, totalCandles - 1)
+
+                        if (candleIndex in klines.indices) {
+                            selectedCandleIndex = candleIndex
+                            showPopup = true
+
+                            val candleCenterX = candleIndex * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
+                            guideLineX = candleCenterX * scale + offsetX
+                            guideLineY = offset.y
+                            isGuideLine = true
+                        }
+                    }
+                },
+                onTap = {
+                    showPopup = false
+                    guideLineX = null
+                    guideLineY = null
+                    isGuideLine = false
+                }
+            )
+        }
+        .pointerInput(Unit) {
+            detectDragGestures(
+                onDragStart = { offset ->
+                    if (isGuideLine) {
+                        guideLineX = offset.x
+                        guideLineY = offset.y
+                    }
+                },
+                onDrag = { change, dragAmount ->
+                    change.consume()
+
+                    if (isGuideLine) {
+                        guideLineX = (guideLineX!! + dragAmount.x).coerceIn(0f, canvasWidthPx)
+                        guideLineY = (guideLineY!! + dragAmount.y).coerceIn(0f, canvasHeightPx)
+                    }
+                },
+                onDragEnd = {
+                    if (isGuideLine) {
+                        selectedCandleIndex?.let { index ->
+                            val candleCenterX = index * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
+                            guideLineX = candleCenterX * scale + offsetX
+                            guideLineY = size.height / 2f
+                        }
+                    }
+                }
+            )
+        }
 
     LaunchedEffect(scale, klines) {
         val canvasWidth = with(density2) { 300.dp.toPx() }
@@ -163,27 +224,12 @@ fun CandleStickChartView(
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
             .border(2.dp, Color.Gray)
             .clip(RoundedCornerShape(12.dp))
-            .then(dragModifier) // Tek parmak kaydırma için
-            .transformable(state = transformableState) // Çift parmak zoom için
+            .then(dragModifier)
+            .transformable(state = transformableState)
     ) {
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = { offset ->
-                            val canvasOffsetX = (offset.x / scale + offsetX).toInt()
-                            val canvasOffsetY = (offset.y / scale + offsetY).toInt()
-                            val candleIndex = (canvasOffsetX / (candleWidthPx + candleSpacingPx)).toInt()
-
-                            if (candleIndex in klines.indices) {
-                                selectedCandleIndex = candleIndex
-                                popupOffset = Offset(offset.x, offset.y)
-                                showPopup = true
-                            }
-                        }
-                    )
-                }
         ) {
             val canvasWidth = size.width
             val canvasHeight = size.height
@@ -229,11 +275,31 @@ fun CandleStickChartView(
                         priceRange = priceRange,
                         canvasHeight = canvasHeight
                     )
+
+                    // Kılavuz çizgilerini ölçeklenmiş ve kaydırılmış konumlarla çiz
+                    if (isGuideLine) {
+                        guideLineX?.let { x ->
+                            drawLine(
+                                color = Color.Blue,
+                                start = Offset(x, 0f),
+                                end = Offset(x, canvasHeight),
+                                strokeWidth = 1.dp.toPx(density)
+                            )
+                        }
+                        guideLineY?.let { y ->
+                            drawLine(
+                                color = Color.Blue,
+                                start = Offset(0f, y),
+                                end = Offset(canvasWidth, y),
+                                strokeWidth = 1.dp.toPx(density)
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Show popup for selected candle
+        // Seçili mum çubuğu için popup gösterme
         if (showPopup && selectedCandleIndex != null) {
             val candle = klines[selectedCandleIndex!!]
             Popup(
@@ -248,10 +314,11 @@ fun CandleStickChartView(
                         .width(200.dp)
                 ) {
                     Column {
-                        Text("Open: ${removeTrailingZeros(candle.openPrice)}", fontSize = 14.sp)
-                        Text("Close: ${removeTrailingZeros(candle.closePrice)}", fontSize = 14.sp)
-                        Text("High: ${removeTrailingZeros(candle.highPrice)}", fontSize = 14.sp)
-                        Text("Low: ${removeTrailingZeros(candle.lowPrice)}", fontSize = 14.sp)
+                        Text("Açılış: ${removeTrailingZeros(candle.openPrice)}", fontSize = 14.sp)
+                        Text("Kapanış: ${removeTrailingZeros(candle.closePrice)}", fontSize = 14.sp)
+                        Text("En Yüksek: ${removeTrailingZeros(candle.highPrice)}", fontSize = 14.sp)
+                        Text("En Düşük: ${removeTrailingZeros(candle.lowPrice)}", fontSize = 14.sp)
+                        Text("Tarih: ${candle.openTime}", fontSize = 14.sp)
                     }
                 }
             }
@@ -259,16 +326,11 @@ fun CandleStickChartView(
     }
 }
 
-// Aralık kontrol fonksiyonu
-private fun Float.checkRange(min: Float, max: Float): Float {
-    return when {
-        this < min -> min
-        this > max -> max
-        else -> this
-    }
+fun Float.checkRange(min: Float, max: Float): Float {
+    return coerceIn(min, max)
 }
 
-// Mumlar çizim fonksiyonu
+
 private fun DrawScope.drawCandles(
     klines: List<KlineModel>,
     candleWidth: Float,
@@ -291,14 +353,14 @@ private fun DrawScope.drawCandles(
         val candleYHigh = canvasHeight - ((highPrice - minLow) * heightRatio)
         val candleYLow = canvasHeight - ((lowPrice - minLow) * heightRatio)
 
-        // Mum gövdesi
+        // Candle body
         drawRect(
             color = if (closePrice >= openPrice) Color.Green else Color.Red,
             topLeft = Offset(candleX, minOf(candleYOpen, candleYClose)),
             size = Size(candleWidth, Math.abs(candleYOpen - candleYClose))
         )
 
-        // Mum fitili
+        // Candle wick
         drawLine(
             color = if (closePrice >= openPrice) Color.Green else Color.Red,
             start = Offset(candleX + candleWidth / 2, candleYHigh),
@@ -308,7 +370,6 @@ private fun DrawScope.drawCandles(
     }
 }
 
-// Y ekseni etiketleri çizimi
 private fun DrawScope.drawYLabels(
     minLow: Float,
     maxHigh: Float,
@@ -337,34 +398,4 @@ private fun DrawScope.drawYLabels(
     }
 }
 
-// DP to PX dönüştürme fonksiyonu
 private fun Dp.toPx(density: Float): Float = this.value * density
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

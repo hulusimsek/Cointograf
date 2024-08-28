@@ -147,7 +147,8 @@ fun HomeScreen(
                             .fillMaxWidth(),
                         onActiveChange = { active ->
                             isSearchBarExpanded = active
-                        }
+                        },
+                        QueryText = searchQuery
                     )
                 }
 
@@ -267,9 +268,10 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     onActiveChange: (Boolean) -> Unit = {},
     viewModel: HomeViewModel,
-    onSearchQuery: (String) -> Unit = {}
+    onSearchQuery: (String) -> Unit = {},
+    QueryText: String
 ) {
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(QueryText) }
     var isActive by remember { mutableStateOf(false) }
     val state by viewModel.state.collectAsState()
     val searchQueryList by viewModel.searchQueryList.collectAsState()
