@@ -1,10 +1,9 @@
+
 package com.hulusimsek.cryptoapp.presentation.details_screen.views
 
 import android.annotation.SuppressLint
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.Composable
@@ -41,7 +40,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,12 +57,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas // Import this
-
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -86,22 +79,16 @@ import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CandleStickChartView(
     klines: List<KlineModel>,
@@ -137,14 +124,17 @@ fun CandleStickChartView(
         val scaleChange = newScale / scale
         scale = newScale
 
-        // Calculate new boundaries
-        val minX = -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx).coerceAtMost(0f)
-        val minY = -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx).coerceAtMost(0f)
+        // Kaydırma değerlerini güncelle
+        offsetX = (offsetX + offsetChange.x * scaleChange).checkRange(
+            -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
+            0f
+        )
+        offsetY = (offsetY + offsetChange.y * scaleChange).checkRange(
+            -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
+            0f
+        )
 
-        offsetX = (offsetX + offsetChange.x * scaleChange).checkRange(minX, 0f)
-        offsetY = (offsetY + offsetChange.y * scaleChange).checkRange(minY, 0f)
-
-        // Update guide lines if active
+        // Kılavuz çizgilerini güncelle
         if (isGuideLine) {
             guideLineX = guideLineX?.let { (it - offsetX) * scaleChange + offsetX }
             guideLineY = guideLineY?.let { (it - offsetY) * scaleChange + offsetY }
@@ -155,11 +145,14 @@ fun CandleStickChartView(
         detectDragGestures { change, dragAmount ->
             change.consume()
 
-            val minX = -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx).coerceAtMost(0f)
-            val minY = -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx).coerceAtMost(0f)
-
-            offsetX = (offsetX + dragAmount.x).checkRange(minX, 0f)
-            offsetY = (offsetY + dragAmount.y).checkRange(minY, 0f)
+            offsetX = (offsetX + dragAmount.x).checkRange(
+                -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
+                0f
+            )
+            offsetY = (offsetY + dragAmount.y).checkRange(
+                -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
+                0f
+            )
 
             if (!isGuideLine) {
                 guideLineX = null
@@ -214,7 +207,7 @@ fun CandleStickChartView(
                         selectedCandleIndex?.let { index ->
                             val candleCenterX = index * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
                             guideLineX = candleCenterX * scale + offsetX
-                            guideLineY = canvasHeightPx / 2f
+                            guideLineY = size.height / 2f
                         }
                     }
                 }
@@ -284,7 +277,7 @@ fun CandleStickChartView(
                         canvasHeight = canvasHeight
                     )
 
-                    // Draw guide lines if active
+                    // Kılavuz çizgilerini ölçeklenmiş ve kaydırılmış konumlarla çiz
                     if (isGuideLine) {
                         guideLineX?.let { x ->
                             drawLine(
@@ -307,43 +300,26 @@ fun CandleStickChartView(
             }
         }
 
+        // Seçili mum çubuğu için popup gösterme
         if (showPopup && selectedCandleIndex != null) {
-            val candleData = klines[selectedCandleIndex!!]
+            val candle = klines[selectedCandleIndex!!]
             Popup(
                 alignment = Alignment.TopStart,
                 offset = IntOffset(popupOffset.x.toInt(), popupOffset.y.toInt())
             ) {
-                Box(
+                Surface(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                        .background(Color.White, RoundedCornerShape(8.dp))
+                        .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
                         .padding(8.dp)
+                        .width(200.dp)
                 ) {
                     Column {
-                        Text(
-                            text = "Date: ${candleData.openTime}",
-                            color = Color.Black,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = "Open: ${candleData.openPrice}",
-                            color = Color.Black,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = "Close: ${candleData.closePrice}",
-                            color = Color.Black,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = "High: ${candleData.highPrice}",
-                            color = Color.Black,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = "Low: ${candleData.lowPrice}",
-                            color = Color.Black,
-                            fontSize = 12.sp
-                        )
+                        Text("Açılış: ${removeTrailingZeros(candle.openPrice)}", fontSize = 14.sp)
+                        Text("Kapanış: ${removeTrailingZeros(candle.closePrice)}", fontSize = 14.sp)
+                        Text("En Yüksek: ${removeTrailingZeros(candle.highPrice)}", fontSize = 14.sp)
+                        Text("En Düşük: ${removeTrailingZeros(candle.lowPrice)}", fontSize = 14.sp)
+                        Text("Tarih: ${formatDate(candle.openTime)}", fontSize = 14.sp)
                     }
                 }
             }
@@ -351,13 +327,11 @@ fun CandleStickChartView(
     }
 }
 
-// Extension function to convert Dp to Px
-private fun Dp.toPx(density: Float) = value * density
+fun Float.checkRange(min: Float, max: Float): Float {
+    return coerceIn(min, max)
+}
 
-// Helper function to clamp values within a given range
-private fun Float.checkRange(min: Float, max: Float): Float = coerceIn(min, max)
 
-// Draw candles function
 private fun DrawScope.drawCandles(
     klines: List<KlineModel>,
     candleWidth: Float,
@@ -366,62 +340,70 @@ private fun DrawScope.drawCandles(
     minLow: Float,
     priceRange: Float
 ) {
+    val heightRatio = canvasHeight / priceRange
+
     klines.forEachIndexed { index, kline ->
-        val openPrice = kline.openPrice.toFloat()
-        val closePrice = kline.closePrice.toFloat()
-        val highPrice = kline.highPrice.toFloat()
-        val lowPrice = kline.lowPrice.toFloat()
+        val openPrice = kline.openPrice.toFloatOrNull() ?: 0f
+        val closePrice = kline.closePrice.toFloatOrNull() ?: 0f
+        val highPrice = kline.highPrice.toFloatOrNull() ?: 0f
+        val lowPrice = kline.lowPrice.toFloatOrNull() ?: 0f
 
-        val x = index * (candleWidth + candleSpacing)
-        val rectColor = if (closePrice > openPrice) Color.Green else Color.Red
+        val candleX = index * (candleWidth + candleSpacing)
+        val candleYOpen = canvasHeight - ((openPrice - minLow) * heightRatio)
+        val candleYClose = canvasHeight - ((closePrice - minLow) * heightRatio)
+        val candleYHigh = canvasHeight - ((highPrice - minLow) * heightRatio)
+        val candleYLow = canvasHeight - ((lowPrice - minLow) * heightRatio)
 
-        val candleTop = canvasHeight * (1f - (max(openPrice, closePrice) - minLow) / priceRange)
-        val candleBottom = canvasHeight * (1f - (min(openPrice, closePrice) - minLow) / priceRange)
-
-        val highY = canvasHeight * (1f - (highPrice - minLow) / priceRange)
-        val lowY = canvasHeight * (1f - (lowPrice - minLow) / priceRange)
-
+        // Candle body
         drawRect(
-            color = rectColor,
-            topLeft = Offset(x, candleTop),
-            size = Size(candleWidth, candleBottom - candleTop)
+            color = if (closePrice >= openPrice) Color.Green else Color.Red,
+            topLeft = Offset(candleX, minOf(candleYOpen, candleYClose)),
+            size = Size(candleWidth, Math.abs(candleYOpen - candleYClose))
         )
+
+        // Candle wick
         drawLine(
-            color = rectColor,
-            start = Offset(x + candleWidth / 2, highY),
-            end = Offset(x + candleWidth / 2, lowY),
-            strokeWidth = 1.dp.toPx(density)
+            color = if (closePrice >= openPrice) Color.Green else Color.Red,
+            start = Offset(candleX + candleWidth / 2, candleYHigh),
+            end = Offset(candleX + candleWidth / 2, candleYLow),
+            strokeWidth = 2f
         )
     }
 }
 
-// Draw Y-axis labels
 private fun DrawScope.drawYLabels(
     minLow: Float,
     maxHigh: Float,
     priceRange: Float,
     canvasHeight: Float
 ) {
-    val steps = 5
-    val step = priceRange / steps
+    val labelCount = 9
 
-    // Create a native Android graphics Paint
-    val labelPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.BLACK
-        textSize = 12.sp.toPx() // Set text size using Compose's text size
-        isAntiAlias = true // For smoother text
+    for (i in 0 until labelCount) {
+        val labelValue = minLow + (priceRange / (labelCount - 1)) * i
+        val yPos = canvasHeight - ((labelValue - minLow) * (canvasHeight / priceRange))
+        val labelText = removeTrailingZeros(labelValue.toString())
+
+        drawContext.canvas.nativeCanvas.apply {
+            drawText(
+                labelText,
+                20f,
+                yPos,
+                Paint().apply {
+                    color = Color.Gray.toArgb()
+                    textSize = 24f
+                    textAlign = Paint.Align.LEFT
+                }
+            )
+        }
     }
+}
 
-    (0..steps).forEach { i ->
-        val price = minLow + i * step
-        val y = canvasHeight * (1f - (price - minLow) / priceRange)
+private fun Dp.toPx(density: Float): Float = this.value * density
 
-        // Draw text using native canvas
-        drawContext.canvas.nativeCanvas.drawText(
-            String.format("%.2f", price),
-            4.dp.toPx(), // X offset for text drawing
-            y,
-            labelPaint
-        )
-    }
+
+fun formatDate(epochMillis: Long): String {
+    val date = Date(epochMillis)
+    val format = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
+    return format.format(date)
 }
