@@ -1,6 +1,7 @@
 package com.hulusimsek.cryptoapp.domain.model
 
 data class KlineModel(
+    val index: Int,
     val openTime: Long, // Kline open time
     val openPrice: String, // Open price
     val highPrice: String, // High price

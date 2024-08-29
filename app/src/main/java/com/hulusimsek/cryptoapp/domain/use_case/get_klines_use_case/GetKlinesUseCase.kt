@@ -20,8 +20,9 @@ class GetKlinesUseCase @Inject constructor(private val repository: CryptoReposit
 
                 // Eğer liste boş değilse dönüşüm işlemini yap
                 if (klineList.isNotEmpty()) {
-                    emit(Resource.Success(klineList.map {
+                    emit(Resource.Success(klineList.mapIndexed {index, it ->
                         KlineModel(
+                            index = index,
                             openTime = (it[0] as Number).toLong(),
                             openPrice = it[1] as String,
                             highPrice = it[2] as String,
