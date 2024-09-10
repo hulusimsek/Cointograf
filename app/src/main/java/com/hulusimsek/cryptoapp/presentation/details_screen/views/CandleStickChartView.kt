@@ -97,7 +97,6 @@ fun CandleStickChartView(
     klines: List<KlineModel>,
     modifier: Modifier = Modifier
 ) {
-    var scale by remember { mutableStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
 
@@ -122,38 +121,16 @@ fun CandleStickChartView(
 
     val totalCandles = klines.size
 
-    val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
-        val newScale = (scale * zoomChange).coerceIn(0.5f, 2.0f)
-        val scaleChange = newScale / scale
-        scale = newScale
-
-        // Kaydırma değerlerini güncelle
-        offsetX = (offsetX + offsetChange.x * scaleChange).checkRange(
-            -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
-            0f
-        )
-        offsetY = (offsetY + offsetChange.y * scaleChange).checkRange(
-            -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
-            0f
-        )
-
-        // Kılavuz çizgilerini güncelle
-        if (isGuideLine) {
-            guideLineX = guideLineX?.let { (it - offsetX) * scaleChange + offsetX }
-            guideLineY = guideLineY?.let { (it - offsetY) * scaleChange + offsetY }
-        }
-    }
-
     val dragModifier = Modifier.pointerInput(Unit) {
         detectDragGestures { change, dragAmount ->
             change.consume()
 
             offsetX = (offsetX + dragAmount.x).checkRange(
-                -((candleWidthPx * scale + candleSpacingPx) * totalCandles - canvasWidthPx),
+                -((candleWidthPx + candleSpacingPx) * totalCandles - canvasWidthPx),
                 0f
             )
             offsetY = (offsetY + dragAmount.y).checkRange(
-                -((canvasHeightPx * scale + candleSpacingPx) * totalCandles - canvasHeightPx),
+                -((canvasHeightPx + candleSpacingPx) * totalCandles - canvasHeightPx),
                 0f
             )
 
@@ -167,7 +144,7 @@ fun CandleStickChartView(
             detectTapGestures(
                 onLongPress = { offset ->
                     if (!isGuideLine) {
-                        val transformedX = (offset.x - offsetX) / scale
+                        val transformedX = (offset.x - offsetX)
                         val candleIndex = (transformedX / (candleWidthPx + candleSpacingPx)).toInt().coerceIn(0, totalCandles - 1)
 
                         if (candleIndex in klines.indices) {
@@ -175,7 +152,7 @@ fun CandleStickChartView(
                             showPopup = true
 
                             val candleCenterX = candleIndex * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
-                            guideLineX = candleCenterX * scale + offsetX
+                            guideLineX = candleCenterX + offsetX
                             guideLineY = offset.y
                             isGuideLine = true
                         }
@@ -190,9 +167,9 @@ fun CandleStickChartView(
             )
         }
 
-    LaunchedEffect(scale, klines) {
+    LaunchedEffect(klines) {
         val canvasWidth = with(density2) { 300.dp.toPx() }
-        val totalWidth = (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
+        val totalWidth = (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
         offsetX = (-totalWidth + canvasWidth).checkRange(-totalWidth, canvasWidth)
     }
 
@@ -202,7 +179,6 @@ fun CandleStickChartView(
             .border(2.dp, Color.Gray)
             .clip(RoundedCornerShape(12.dp))
             .then(dragModifier)
-            .transformable(state = transformableState)
     ) {
         // 1. Bölüm: Mum Grafiği
         Box(
@@ -218,16 +194,16 @@ fun CandleStickChartView(
                 val canvasHeight = size.height
 
                 val totalWidth =
-                    (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
+                    (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
 
                 val fromIndex =
-                    ((-offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
                 val toIndex =
-                    ((canvasWidth - offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt() + fromIndex
+                    ((canvasWidth - offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
                 val adjustedFromIndex = fromIndex.coerceAtLeast(0)
                 val adjustedToIndex = minOf(
-                    adjustedFromIndex + (canvasWidth / (candleWidthPx * scale + candleSpacingPx)).toInt() + 1,
+                    adjustedFromIndex + (canvasWidth / (candleWidthPx + candleSpacingPx)).toInt() + 1,
                     totalCandles
                 )
 
@@ -246,7 +222,7 @@ fun CandleStickChartView(
                         // Mum çubuklarını çizme
                         drawCandles(
                             klines = visibleKlines,
-                            candleWidth = candleWidthPx * scale,
+                            candleWidth = candleWidthPx,
                             candleSpacing = candleSpacingPx,
                             canvasHeight = canvasHeight,
                             minLow = minLow,
@@ -298,16 +274,16 @@ fun CandleStickChartView(
                 val canvasHeight = size.height
 
                 val totalWidth =
-                    (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
+                    (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
 
                 val fromIndex =
-                    ((-offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
                 val toIndex =
-                    ((canvasWidth - offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt() + fromIndex
+                    ((canvasWidth - offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
                 val adjustedFromIndex = fromIndex.coerceAtLeast(0)
                 val adjustedToIndex = minOf(
-                    adjustedFromIndex + (canvasWidth / (candleWidthPx * scale + candleSpacingPx)).toInt() + 1,
+                    adjustedFromIndex + (canvasWidth / (candleWidthPx + candleSpacingPx)).toInt() + 1,
                     totalCandles
                 )
 
@@ -317,7 +293,7 @@ fun CandleStickChartView(
                     // Hacim grafiği çizimi
                     drawVolumes(
                         klines = visibleKlines,
-                        candleWidth = candleWidthPx * scale,
+                        candleWidth = candleWidthPx,
                         candleSpacing = candleSpacingPx,
                         canvasHeight = canvasHeight
                     )
@@ -347,6 +323,7 @@ fun CandleStickChartView(
         }
     }
 }
+
 
 // Hacim grafiği çizen fonksiyon
 private fun DrawScope.drawVolumes(
