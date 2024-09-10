@@ -121,6 +121,9 @@ fun CandleStickChartView(
 
     val totalCandles = klines.size
 
+    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+
+
     val dragModifier = Modifier.pointerInput(Unit) {
         detectDragGestures { change, dragAmount ->
             change.consume()
@@ -176,7 +179,6 @@ fun CandleStickChartView(
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-            .border(2.dp, Color.Gray)
             .clip(RoundedCornerShape(12.dp))
             .then(dragModifier)
     ) {
@@ -233,7 +235,8 @@ fun CandleStickChartView(
                             minLow = minLow,
                             maxHigh = maxHigh,
                             priceRange = priceRange,
-                            canvasHeight = canvasHeight
+                            canvasHeight = canvasHeight,
+                            textColor = textColor
                         )
 
                         // Kılavuz çizgilerini ölçeklenmiş ve kaydırılmış konumlarla çiz
@@ -300,6 +303,89 @@ fun CandleStickChartView(
                 }
             }
         }
+
+        Box(
+            modifier = Modifier
+                .height(40.dp)
+                .fillMaxWidth()
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                val canvasWidth = size.width
+                val padding = 40.dp.toPx() // Baştaki ve sondaki tarihler için padding ekledik
+
+                // Başta, ortada ve sonda tarihler için endeks hesaplaması
+                val fromIndex =
+                    ((-offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
+                val toIndex =
+                    ((canvasWidth - offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
+
+                val adjustedFromIndex = fromIndex.coerceAtLeast(0)
+                val adjustedToIndex = minOf(
+                    adjustedFromIndex + (canvasWidth / (candleWidthPx + candleSpacingPx)).toInt() + 1,
+                    totalCandles
+                )
+
+                if (adjustedFromIndex < adjustedToIndex && adjustedFromIndex < totalCandles) {
+                    val visibleKlines = klines.subList(adjustedFromIndex, adjustedToIndex)
+
+                    // Başta, ortada ve sonda olan tarihler
+                    val firstKline = visibleKlines.first()
+                    val middleKline = visibleKlines[visibleKlines.size / 2]
+                    val lastKline = visibleKlines.last()
+
+                    val firstDateX = padding // Baştaki tarih padding ile yerleştiriliyor
+                    val middleDateX = canvasWidth / 2
+                    val lastDateX = canvasWidth - padding
+
+                    // Tarih formatlama
+                    val firstDate = formatDate(firstKline.openTime)
+                    val middleDate = formatDate(middleKline.openTime)
+                    val lastDate = formatDate(lastKline.openTime)
+
+
+
+                    // Başta, ortada ve sondaki tarihleri çizme
+                    drawContext.canvas.nativeCanvas.drawText(
+                        firstDate,
+                        firstDateX,
+                        30f,  // Y ekseninde tarihin konumu
+                        Paint().apply {
+                            color = textColor
+                            textSize = 30f
+                            textAlign = Paint.Align.CENTER
+                        }
+                    )
+
+                    drawContext.canvas.nativeCanvas.drawText(
+                        middleDate,
+                        middleDateX,
+                        30f,
+                        Paint().apply {
+                            color = textColor
+                            textSize = 30f
+                            textAlign = Paint.Align.CENTER
+                        }
+                    )
+
+                    drawContext.canvas.nativeCanvas.drawText(
+                        lastDate,
+                        lastDateX,
+                        30f,
+                        Paint().apply {
+                            color = textColor
+                            textSize = 30f
+                            textAlign = Paint.Align.CENTER
+                        }
+                    )
+                }
+            }
+        }
+
+
+
 
         // Seçili mum çubuğu için popup gösterme
         if (showPopup && selectedCandleIndex != null) {
@@ -408,7 +494,8 @@ private fun DrawScope.drawYLabels(
     minLow: Float,
     maxHigh: Float,
     priceRange: Float,
-    canvasHeight: Float
+    canvasHeight: Float,
+    textColor: Int
 ) {
     val labelCount = 9
 
@@ -423,7 +510,7 @@ private fun DrawScope.drawYLabels(
                 20f,
                 yPos,
                 Paint().apply {
-                    color = Color.Gray.toArgb()
+                    color = textColor
                     textSize = 24f
                     textAlign = Paint.Align.LEFT
                 }
