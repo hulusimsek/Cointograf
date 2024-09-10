@@ -123,7 +123,7 @@ fun HomeScreen(
 
                 if (!isSearchBarExpanded) {
                     Text(
-                        text = "Crypto App",
+                        text = "Cointograf",
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         fontSize = 40.sp,

@@ -4,6 +4,7 @@ package com.hulusimsek.cryptoapp.presentation.details_screen.views
 import android.annotation.SuppressLint
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.Composable
@@ -40,6 +41,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -82,12 +85,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.atan
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
-
 
 @Composable
 fun CandleStickChartView(
@@ -186,33 +189,6 @@ fun CandleStickChartView(
                 }
             )
         }
-        .pointerInput(Unit) {
-            detectDragGestures(
-                onDragStart = { offset ->
-                    if (isGuideLine) {
-                        guideLineX = offset.x
-                        guideLineY = offset.y
-                    }
-                },
-                onDrag = { change, dragAmount ->
-                    change.consume()
-
-                    if (isGuideLine) {
-                        guideLineX = (guideLineX!! + dragAmount.x).coerceIn(0f, canvasWidthPx)
-                        guideLineY = (guideLineY!! + dragAmount.y).coerceIn(0f, canvasHeightPx)
-                    }
-                },
-                onDragEnd = {
-                    if (isGuideLine) {
-                        selectedCandleIndex?.let { index ->
-                            val candleCenterX = index * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
-                            guideLineX = candleCenterX * scale + offsetX
-                            guideLineY = size.height / 2f
-                        }
-                    }
-                }
-            )
-        }
 
     LaunchedEffect(scale, klines) {
         val canvasWidth = with(density2) { 300.dp.toPx() }
@@ -220,7 +196,7 @@ fun CandleStickChartView(
         offsetX = (-totalWidth + canvasWidth).checkRange(-totalWidth, canvasWidth)
     }
 
-    Box(
+    Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
             .border(2.dp, Color.Gray)
@@ -228,74 +204,123 @@ fun CandleStickChartView(
             .then(dragModifier)
             .transformable(state = transformableState)
     ) {
-        Canvas(
+        // 1. Bölüm: Mum Grafiği
+        Box(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
+                .fillMaxWidth()
         ) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                val canvasWidth = size.width
+                val canvasHeight = size.height
 
-            val totalWidth =
-                (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
+                val totalWidth =
+                    (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
 
-            val fromIndex =
-                ((-offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt().coerceAtLeast(0)
-            val toIndex =
-                ((canvasWidth - offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt() + fromIndex
+                val fromIndex =
+                    ((-offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt().coerceAtLeast(0)
+                val toIndex =
+                    ((canvasWidth - offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt() + fromIndex
 
-            val adjustedFromIndex = fromIndex.coerceAtLeast(0)
-            val adjustedToIndex = minOf(
-                adjustedFromIndex + (canvasWidth / (candleWidthPx * scale + candleSpacingPx)).toInt() + 1,
-                totalCandles
-            )
+                val adjustedFromIndex = fromIndex.coerceAtLeast(0)
+                val adjustedToIndex = minOf(
+                    adjustedFromIndex + (canvasWidth / (candleWidthPx * scale + candleSpacingPx)).toInt() + 1,
+                    totalCandles
+                )
 
-            if (adjustedFromIndex < adjustedToIndex && adjustedFromIndex < totalCandles) {
-                val visibleKlines = klines.subList(adjustedFromIndex, adjustedToIndex)
+                if (adjustedFromIndex < adjustedToIndex && adjustedFromIndex < totalCandles) {
+                    val visibleKlines = klines.subList(adjustedFromIndex, adjustedToIndex)
 
-                val minLow =
-                    visibleKlines.minOfOrNull { it.lowPrice.toFloatOrNull() ?: Float.MAX_VALUE }
-                        ?: 0f
-                val maxHigh =
-                    visibleKlines.maxOfOrNull { it.highPrice.toFloatOrNull() ?: Float.MIN_VALUE }
-                        ?: 1f
-                val priceRange = maxHigh - minLow
+                    val minLow =
+                        visibleKlines.minOfOrNull { it.lowPrice.toFloatOrNull() ?: Float.MAX_VALUE }
+                            ?: 0f
+                    val maxHigh =
+                        visibleKlines.maxOfOrNull { it.highPrice.toFloatOrNull() ?: Float.MIN_VALUE }
+                            ?: 1f
+                    val priceRange = maxHigh - minLow
 
-                if (priceRange > 0) {
-                    drawCandles(
+                    if (priceRange > 0) {
+                        // Mum çubuklarını çizme
+                        drawCandles(
+                            klines = visibleKlines,
+                            candleWidth = candleWidthPx * scale,
+                            candleSpacing = candleSpacingPx,
+                            canvasHeight = canvasHeight,
+                            minLow = minLow,
+                            priceRange = priceRange
+                        )
+
+                        drawYLabels(
+                            minLow = minLow,
+                            maxHigh = maxHigh,
+                            priceRange = priceRange,
+                            canvasHeight = canvasHeight
+                        )
+
+                        // Kılavuz çizgilerini ölçeklenmiş ve kaydırılmış konumlarla çiz
+                        if (isGuideLine) {
+                            guideLineX?.let { x ->
+                                drawLine(
+                                    color = Color.Blue,
+                                    start = Offset(x, 0f),
+                                    end = Offset(x, canvasHeight),
+                                    strokeWidth = 1.dp.toPx(density)
+                                )
+                            }
+                            guideLineY?.let { y ->
+                                drawLine(
+                                    color = Color.Blue,
+                                    start = Offset(0f, y),
+                                    end = Offset(canvasWidth, y),
+                                    strokeWidth = 1.dp.toPx(density)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Bölüm: Hacim Grafiği
+        Box(
+            modifier = Modifier
+                .height(100.dp)
+                .fillMaxWidth()
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                val canvasWidth = size.width
+                val canvasHeight = size.height
+
+                val totalWidth =
+                    (candleWidthPx * scale + candleSpacingPx) * totalCandles - candleSpacingPx
+
+                val fromIndex =
+                    ((-offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt().coerceAtLeast(0)
+                val toIndex =
+                    ((canvasWidth - offsetX) / (candleWidthPx * scale + candleSpacingPx)).toInt() + fromIndex
+
+                val adjustedFromIndex = fromIndex.coerceAtLeast(0)
+                val adjustedToIndex = minOf(
+                    adjustedFromIndex + (canvasWidth / (candleWidthPx * scale + candleSpacingPx)).toInt() + 1,
+                    totalCandles
+                )
+
+                if (adjustedFromIndex < adjustedToIndex && adjustedFromIndex < totalCandles) {
+                    val visibleKlines = klines.subList(adjustedFromIndex, adjustedToIndex)
+
+                    // Hacim grafiği çizimi
+                    drawVolumes(
                         klines = visibleKlines,
                         candleWidth = candleWidthPx * scale,
                         candleSpacing = candleSpacingPx,
-                        canvasHeight = canvasHeight,
-                        minLow = minLow,
-                        priceRange = priceRange
-                    )
-
-                    drawYLabels(
-                        minLow = minLow,
-                        maxHigh = maxHigh,
-                        priceRange = priceRange,
                         canvasHeight = canvasHeight
                     )
-
-                    // Kılavuz çizgilerini ölçeklenmiş ve kaydırılmış konumlarla çiz
-                    if (isGuideLine) {
-                        guideLineX?.let { x ->
-                            drawLine(
-                                color = Color.Blue,
-                                start = Offset(x, 0f),
-                                end = Offset(x, canvasHeight),
-                                strokeWidth = 1.dp.toPx(density)
-                            )
-                        }
-                        guideLineY?.let { y ->
-                            drawLine(
-                                color = Color.Blue,
-                                start = Offset(0f, y),
-                                end = Offset(canvasWidth, y),
-                                strokeWidth = 1.dp.toPx(density)
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -307,25 +332,56 @@ fun CandleStickChartView(
                 alignment = Alignment.TopStart,
                 offset = IntOffset(popupOffset.x.toInt(), popupOffset.y.toInt())
             ) {
-                Surface(
+                Column(
                     modifier = Modifier
-                        .background(Color.White, RoundedCornerShape(8.dp))
-                        .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
+                        .background(Color.Gray)
                         .padding(8.dp)
-                        .width(200.dp)
                 ) {
-                    Column {
-                        Text("Açılış: ${removeTrailingZeros(candle.openPrice)}", fontSize = 14.sp)
-                        Text("Kapanış: ${removeTrailingZeros(candle.closePrice)}", fontSize = 14.sp)
-                        Text("En Yüksek: ${removeTrailingZeros(candle.highPrice)}", fontSize = 14.sp)
-                        Text("En Düşük: ${removeTrailingZeros(candle.lowPrice)}", fontSize = 14.sp)
-                        Text("Tarih: ${formatDate(candle.openTime)}", fontSize = 14.sp)
-                    }
+                    Text("Açılış: ${removeTrailingZeros(candle.openPrice)}", fontSize = 14.sp)
+                    Text("Kapanış: ${removeTrailingZeros(candle.closePrice)}", fontSize = 14.sp)
+                    Text("En Yüksek: ${removeTrailingZeros(candle.highPrice)}", fontSize = 14.sp)
+                    Text("En Düşük: ${removeTrailingZeros(candle.lowPrice)}", fontSize = 14.sp)
+                    Text("Tarih: ${formatDate(candle.openTime)}", fontSize = 14.sp)
                 }
             }
         }
     }
 }
+
+// Hacim grafiği çizen fonksiyon
+private fun DrawScope.drawVolumes(
+    klines: List<KlineModel>,
+    candleWidth: Float,
+    candleSpacing: Float,
+    canvasHeight: Float
+) {
+    val maxVolume = klines.maxOfOrNull { it.volume.toFloatOrNull() ?: 0f } ?: 1f
+    val volumeHeightRatio = canvasHeight / maxVolume
+
+    klines.forEachIndexed { index, kline ->
+        val volume = kline.volume.toFloatOrNull() ?: 0f
+        val volumeHeight = volume * volumeHeightRatio
+
+        val candleX = index * (candleWidth + candleSpacing)
+        val candleColor = if ((kline.closePrice.toFloatOrNull() ?: 0f) >= (kline.openPrice.toFloatOrNull() ?: 0f)) {
+            Color.Green
+        } else {
+            Color.Red
+        }
+
+        drawRect(
+            color = candleColor,
+            topLeft = Offset(candleX, canvasHeight - volumeHeight),
+            size = Size(candleWidth, volumeHeight)
+        )
+    }
+}
+
+
+
+
+
+
 
 fun Float.checkRange(min: Float, max: Float): Float {
     return coerceIn(min, max)

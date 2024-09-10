@@ -87,17 +87,18 @@ fun CryptoDetailScreen(
                                 Column(
                                     modifier = Modifier.padding(16.dp)
                                 ) {
-                                    // İsim ve Fiyat
+                                    // İsim ve Fiyat aynı yatay hizada
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(bottom = 8.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         // İsim ve Soyisim aynı hizada
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically
+                                        Column(
+                                            verticalArrangement = Arrangement.Center,
+                                            horizontalAlignment = Alignment.Start
                                         ) {
                                             Text(
                                                 text = state.coin?.name ?: "",
@@ -112,7 +113,7 @@ fun CryptoDetailScreen(
                                             )
                                         }
 
-                                        // Sağ Üstte Fiyat Bilgisi ve Yüzdelik Değişim
+                                        // Fiyat Bilgisi ve Yüzdelik Değişim
                                         Column(
                                             horizontalAlignment = Alignment.End
                                         ) {
