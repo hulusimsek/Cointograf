@@ -78,6 +78,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.window.Popup
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.hulusimsek.cryptoapp.presentation.details_screen.CandleStickChartViewModel
+import com.hulusimsek.cryptoapp.presentation.details_screen.CryptoDetailViewModel
 import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
@@ -93,23 +96,11 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 @Composable
-fun CandleStickChartView(
-    klines: List<KlineModel>,
-    modifier: Modifier = Modifier
-) {
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
-
-    var selectedCandleIndex by remember { mutableStateOf<Int?>(null) }
-    var showPopup by remember { mutableStateOf(false) }
-    var popupOffset by remember { mutableStateOf(Offset.Zero) }
+fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>,) {
+    val viewModel: CandleStickChartViewModel = hiltViewModel()
 
     val density = LocalDensity.current.density
     val density2 = LocalDensity.current
-
-    var guideLineX by remember { mutableStateOf<Float?>(null) }
-    var guideLineY by remember { mutableStateOf<Float?>(null) }
-    var isGuideLine by remember { mutableStateOf(false) }
 
     val candleWidthDp = 8.dp
     val candleSpacingDp = 4.dp
@@ -127,45 +118,26 @@ fun CandleStickChartView(
     val dragModifier = Modifier.pointerInput(Unit) {
         detectDragGestures { change, dragAmount ->
             change.consume()
-
-            offsetX = (offsetX + dragAmount.x).checkRange(
-                -((candleWidthPx + candleSpacingPx) * totalCandles - canvasWidthPx),
-                0f
+            viewModel.onDrag(
+                dragAmount = dragAmount,
+                candleWidthPx = candleWidthPx,
+                candleSpacingPx = candleSpacingPx,
+                canvasWidthPx = canvasWidthPx,
+                canvasHeightPx = canvasHeightPx
             )
-            offsetY = (offsetY + dragAmount.y).checkRange(
-                -((canvasHeightPx + candleSpacingPx) * totalCandles - canvasHeightPx),
-                0f
-            )
-
-            if (!isGuideLine) {
-                guideLineX = null
-                guideLineY = null
-            }
         }
     }
         .pointerInput(Unit) {
             detectTapGestures(
                 onLongPress = { offset ->
-                    if (!isGuideLine) {
-                        val transformedX = (offset.x - offsetX)
-                        val candleIndex = (transformedX / (candleWidthPx + candleSpacingPx)).toInt().coerceIn(0, totalCandles - 1)
-
-                        if (candleIndex in klines.indices) {
-                            selectedCandleIndex = candleIndex
-                            showPopup = true
-
-                            val candleCenterX = candleIndex * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
-                            guideLineX = candleCenterX + offsetX
-                            guideLineY = offset.y
-                            isGuideLine = true
-                        }
-                    }
+                    viewModel.onLongPress(
+                        offset = offset,
+                        candleWidthPx = candleWidthPx,
+                        candleSpacingPx = candleSpacingPx
+                    )
                 },
                 onTap = {
-                    showPopup = false
-                    guideLineX = null
-                    guideLineY = null
-                    isGuideLine = false
+                    viewModel.onTap()
                 }
             )
         }
@@ -173,7 +145,7 @@ fun CandleStickChartView(
     LaunchedEffect(klines) {
         val canvasWidth = with(density2) { 300.dp.toPx() }
         val totalWidth = (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
-        offsetX = (-totalWidth + canvasWidth).checkRange(-totalWidth, canvasWidth)
+        viewModel.offsetX = -totalWidth + canvasWidth.coerceIn(-totalWidth, canvasWidth)
     }
 
     Column(
@@ -199,9 +171,9 @@ fun CandleStickChartView(
                     (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
 
                 val fromIndex =
-                    ((-offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
                 val toIndex =
-                    ((canvasWidth - offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
+                    ((canvasWidth - viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
                 val adjustedFromIndex = fromIndex.coerceAtLeast(0)
                 val adjustedToIndex = minOf(
@@ -240,8 +212,8 @@ fun CandleStickChartView(
                         )
 
                         // Kılavuz çizgilerini ölçeklenmiş ve kaydırılmış konumlarla çiz
-                        if (isGuideLine) {
-                            guideLineX?.let { x ->
+                        if (viewModel.isGuideLine) {
+                            viewModel.guideLineX?.let { x ->
                                 drawLine(
                                     color = Color.Blue,
                                     start = Offset(x, 0f),
@@ -249,7 +221,7 @@ fun CandleStickChartView(
                                     strokeWidth = 1.dp.toPx(density)
                                 )
                             }
-                            guideLineY?.let { y ->
+                            viewModel.guideLineY?.let { y ->
                                 drawLine(
                                     color = Color.Blue,
                                     start = Offset(0f, y),
@@ -280,9 +252,9 @@ fun CandleStickChartView(
                     (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
 
                 val fromIndex =
-                    ((-offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
                 val toIndex =
-                    ((canvasWidth - offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
+                    ((canvasWidth - viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
                 val adjustedFromIndex = fromIndex.coerceAtLeast(0)
                 val adjustedToIndex = minOf(
@@ -318,9 +290,9 @@ fun CandleStickChartView(
 
                 // Başta, ortada ve sonda tarihler için endeks hesaplaması
                 val fromIndex =
-                    ((-offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
                 val toIndex =
-                    ((canvasWidth - offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
+                    ((canvasWidth - viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
                 val adjustedFromIndex = fromIndex.coerceAtLeast(0)
                 val adjustedToIndex = minOf(
@@ -344,8 +316,6 @@ fun CandleStickChartView(
                     val firstDate = formatDate(firstKline.openTime)
                     val middleDate = formatDate(middleKline.openTime)
                     val lastDate = formatDate(lastKline.openTime)
-
-
 
                     // Başta, ortada ve sondaki tarihleri çizme
                     drawContext.canvas.nativeCanvas.drawText(
@@ -384,34 +354,18 @@ fun CandleStickChartView(
             }
         }
 
-
-
-
-        // Seçili mum çubuğu için popup gösterme
-        if (showPopup && selectedCandleIndex != null) {
-            val candle = klines[selectedCandleIndex!!]
+        if (viewModel.showPopup) {
             Popup(
                 alignment = Alignment.TopStart,
-                offset = IntOffset(popupOffset.x.toInt(), popupOffset.y.toInt())
+                offset = IntOffset(viewModel.popupOffset.x.toInt(), viewModel.popupOffset.y.toInt())
             ) {
-                Column(
-                    modifier = Modifier
-                        .background(Color.Gray)
-                        .padding(8.dp)
-                ) {
-                    Text("Açılış: ${removeTrailingZeros(candle.openPrice)}", fontSize = 14.sp)
-                    Text("Kapanış: ${removeTrailingZeros(candle.closePrice)}", fontSize = 14.sp)
-                    Text("En Yüksek: ${removeTrailingZeros(candle.highPrice)}", fontSize = 14.sp)
-                    Text("En Düşük: ${removeTrailingZeros(candle.lowPrice)}", fontSize = 14.sp)
-                    Text("Tarih: ${formatDate(candle.openTime)}", fontSize = 14.sp)
-                }
+                // Popup içeriği buraya eklenir
+                Text(text = "Candle ${viewModel.selectedCandleIndex}", color = Color.White, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
 }
 
-
-// Hacim grafiği çizen fonksiyon
 private fun DrawScope.drawVolumes(
     klines: List<KlineModel>,
     candleWidth: Float,
@@ -498,6 +452,8 @@ private fun DrawScope.drawYLabels(
     textColor: Int
 ) {
     val labelCount = 9
+    val padding = 20f // Etiketleri sağ kenardan padding ile yerleştirme
+
 
     for (i in 0 until labelCount) {
         val labelValue = minLow + (priceRange / (labelCount - 1)) * i
@@ -507,12 +463,12 @@ private fun DrawScope.drawYLabels(
         drawContext.canvas.nativeCanvas.apply {
             drawText(
                 labelText,
-                20f,
+                size.width - padding,
                 yPos,
                 Paint().apply {
                     color = textColor
                     textSize = 24f
-                    textAlign = Paint.Align.LEFT
+                    textAlign = Paint.Align.RIGHT
                 }
             )
         }
