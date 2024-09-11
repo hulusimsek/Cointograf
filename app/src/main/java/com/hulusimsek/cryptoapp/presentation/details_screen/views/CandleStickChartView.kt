@@ -1,4 +1,3 @@
-
 package com.hulusimsek.cryptoapp.presentation.details_screen.views
 
 import android.annotation.SuppressLint
@@ -71,6 +70,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.positionChangeConsumed
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -79,6 +79,7 @@ import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hulusimsek.cryptoapp.R
 import com.hulusimsek.cryptoapp.presentation.details_screen.CandleStickChartViewModel
 import com.hulusimsek.cryptoapp.presentation.details_screen.CryptoDetailViewModel
 import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
@@ -96,7 +97,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 @Composable
-fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>,) {
+fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>) {
     val viewModel: CandleStickChartViewModel = hiltViewModel()
 
     val density = LocalDensity.current.density
@@ -112,21 +113,27 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
 
     val totalCandles = klines.size
 
+    val isGuideLine = viewModel.isGuideLine.collectAsState()
+
+
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
-
-
-    val dragModifier = Modifier.pointerInput(Unit) {
-        detectDragGestures { change, dragAmount ->
-            change.consume()
-            viewModel.onDrag(
-                dragAmount = dragAmount,
-                candleWidthPx = candleWidthPx,
-                candleSpacingPx = candleSpacingPx,
-                canvasWidthPx = canvasWidthPx,
-                canvasHeightPx = canvasHeightPx
-            )
-        }
+    LaunchedEffect(Unit) {
+        viewModel.updateKlines(klines)
     }
+
+    val dragModifier = Modifier
+        .pointerInput(Unit) {
+            detectDragGestures { change, dragAmount ->
+                change.consume()
+                viewModel.onDrag(
+                    dragAmount = dragAmount,
+                    candleWidthPx = candleWidthPx,
+                    candleSpacingPx = candleSpacingPx,
+                    canvasWidthPx = canvasWidthPx,
+                    canvasHeightPx = canvasHeightPx
+                )
+            }
+        }
         .pointerInput(Unit) {
             detectTapGestures(
                 onLongPress = { offset ->
@@ -171,7 +178,8 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
                     (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
 
                 val fromIndex =
-                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt()
+                        .coerceAtLeast(0)
                 val toIndex =
                     ((canvasWidth - viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
@@ -188,7 +196,9 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
                         visibleKlines.minOfOrNull { it.lowPrice.toFloatOrNull() ?: Float.MAX_VALUE }
                             ?: 0f
                     val maxHigh =
-                        visibleKlines.maxOfOrNull { it.highPrice.toFloatOrNull() ?: Float.MIN_VALUE }
+                        visibleKlines.maxOfOrNull {
+                            it.highPrice.toFloatOrNull() ?: Float.MIN_VALUE
+                        }
                             ?: 1f
                     val priceRange = maxHigh - minLow
 
@@ -212,7 +222,7 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
                         )
 
                         // Kılavuz çizgilerini ölçeklenmiş ve kaydırılmış konumlarla çiz
-                        if (viewModel.isGuideLine) {
+                        if (isGuideLine.value) {
                             viewModel.guideLineX?.let { x ->
                                 drawLine(
                                     color = Color.Blue,
@@ -252,7 +262,8 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
                     (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
 
                 val fromIndex =
-                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt()
+                        .coerceAtLeast(0)
                 val toIndex =
                     ((canvasWidth - viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
@@ -290,7 +301,8 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
 
                 // Başta, ortada ve sonda tarihler için endeks hesaplaması
                 val fromIndex =
-                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt().coerceAtLeast(0)
+                    ((-viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt()
+                        .coerceAtLeast(0)
                 val toIndex =
                     ((canvasWidth - viewModel.offsetX) / (candleWidthPx + candleSpacingPx)).toInt() + fromIndex
 
@@ -354,13 +366,42 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
             }
         }
 
-        if (viewModel.showPopup) {
+        if (viewModel.showPopup && viewModel.selectedCandleIndex != null) {
+            val candle = viewModel.klines[viewModel.selectedCandleIndex!!]
             Popup(
                 alignment = Alignment.TopStart,
                 offset = IntOffset(viewModel.popupOffset.x.toInt(), viewModel.popupOffset.y.toInt())
             ) {
-                // Popup içeriği buraya eklenir
-                Text(text = "Candle ${viewModel.selectedCandleIndex}", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                Column(
+                    modifier = Modifier
+                        .background(Color.Gray)
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.open_price) + removeTrailingZeros(candle.openPrice),
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = stringResource(R.string.close_price) + removeTrailingZeros(candle.closePrice),
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = stringResource(R.string.high_price) + removeTrailingZeros(candle.highPrice),
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = stringResource(R.string.low_price) + removeTrailingZeros(candle.lowPrice),
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = stringResource(R.string.volume) + removeTrailingZeros(candle.quoteAssetVolume),
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = stringResource(R.string.date) + formatDate(candle.openTime),
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
     }
@@ -380,11 +421,14 @@ private fun DrawScope.drawVolumes(
         val volumeHeight = volume * volumeHeightRatio
 
         val candleX = index * (candleWidth + candleSpacing)
-        val candleColor = if ((kline.closePrice.toFloatOrNull() ?: 0f) >= (kline.openPrice.toFloatOrNull() ?: 0f)) {
-            Color.Green
-        } else {
-            Color.Red
-        }
+        val candleColor =
+            if ((kline.closePrice.toFloatOrNull() ?: 0f) >= (kline.openPrice.toFloatOrNull()
+                    ?: 0f)
+            ) {
+                Color.Green
+            } else {
+                Color.Red
+            }
 
         drawRect(
             color = candleColor,
@@ -392,16 +436,6 @@ private fun DrawScope.drawVolumes(
             size = Size(candleWidth, volumeHeight)
         )
     }
-}
-
-
-
-
-
-
-
-fun Float.checkRange(min: Float, max: Float): Float {
-    return coerceIn(min, max)
 }
 
 
