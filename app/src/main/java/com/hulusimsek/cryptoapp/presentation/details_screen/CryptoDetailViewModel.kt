@@ -34,6 +34,11 @@ class CryptoDetailViewModel @Inject constructor(
     private var job2: Job? = null
 
 
+    private fun selectTimeRange(timeRange: String) {
+        _interval.value = timeRange
+        fetchKlinesData()
+    }
+
     private fun refresh() {
         val cryptoSymbol = _state.value.currentCrypto
         if (cryptoSymbol != null) {
@@ -119,6 +124,7 @@ class CryptoDetailViewModel @Inject constructor(
             is CryptoDetailsEvent.LoadCryptoDetails -> loadCryptoDetails(event.symbol)
             is CryptoDetailsEvent.Refresh -> refresh()
             is CryptoDetailsEvent.ClearToastMessage -> clearToastMessage()
+            is CryptoDetailsEvent.SelectTimeRange -> selectTimeRange(event.timeRange)
         }
     }
 }

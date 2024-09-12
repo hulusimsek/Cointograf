@@ -28,6 +28,8 @@
     <string name="close_price">Close:</string>
     <string name="date">Date:</string>
 
-
-
+    <string name="time_range_15m">15m</string>
+    <string name="time_range_1h">1h</string>
+    <string name="time_range_4h">4h</string>
+    <string name="time_range_1d">1d</string>
 </resources>

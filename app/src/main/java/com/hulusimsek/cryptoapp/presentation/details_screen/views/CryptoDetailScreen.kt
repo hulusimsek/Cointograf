@@ -1,9 +1,12 @@
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +45,22 @@ fun CryptoDetailScreen(
     val viewModel: CryptoDetailViewModel = hiltViewModel()
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
+
+    val timeRange15m = stringResource(id = R.string.time_range_15m)
+    val timeRange1h = stringResource(id = R.string.time_range_1h)
+    val timeRange4h = stringResource(id = R.string.time_range_4h)
+    val timeRange1d = stringResource(id = R.string.time_range_1d)
+
+    // İngilizce karşılıkları map'e ekliyoruz
+    val timeRangeMap = mapOf(
+        timeRange15m to "15m",
+        timeRange1h to "1h",
+        timeRange4h to "4h",
+        timeRange1d to "1d"
+    )
+
+    val selectedTimeRange by viewModel.interval.collectAsState()
+
 
     LaunchedEffect(state.toastMessage) {
         state.toastMessage?.let {
@@ -210,21 +229,51 @@ fun CryptoDetailScreen(
                         }
                         // Diğer içeriği buraya ekleyebilirsiniz
                     }
-                    Box(
+                    LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(400.dp)
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.Start
                     ) {
-                        if (state.klines != null) {
+                        val timeRanges = listOf(timeRange15m, timeRange1h, timeRange4h, timeRange1d)
+                        items(timeRanges) { timeRange ->
+                            Surface(
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .clickable {
+                                        // Tıklanınca İngilizce karşılığını ViewModel'e gönderiyoruz
+                                        viewModel.onEvent(CryptoDetailsEvent.SelectTimeRange(timeRangeMap[timeRange]!!))
+                                    },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = timeRange,
+                                    modifier = Modifier.padding(8.dp),
+                                    color = if (selectedTimeRange == timeRangeMap[timeRange]) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+
+
+                    if (state.klines != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(400.dp)
+                        ) {
                             CandleStickChartView(
                                 klines = state.klines!!,
                                 modifier = Modifier
                                     .fillMaxSize()
                             )
-                        } else {
-                            // Yükleniyor veya veri yoksa bir gösterim
-                            Text(state.klinesError ?: "Error!!", modifier = Modifier.padding(16.dp))
+
                         }
+                    }
+                    else {
+                        // Yükleniyor veya veri yoksa bir gösterim
+                        Text(state.klinesError ?: "", modifier = Modifier.padding(16.dp))
                     }
                 }
             }
@@ -244,71 +293,5 @@ fun CryptoDetailScreen(
                 }
             }
         }
-    }
-}
-
-
-
-
-
-
-
-@Composable
-fun CryptoDetailContent(cryptoItem: CryptoItem) {
-    Card(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(16.dp)
-        ) {
-            Text(
-                text = cryptoItem.symbol,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    color = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            DetailRow(label = "Last Price", value = cryptoItem.lastPrice)
-            DetailRow(label = "Ask Price", value = cryptoItem.askPrice)
-            DetailRow(label = "Bid Price", value = cryptoItem.bidPrice)
-            DetailRow(label = "Open Price", value = cryptoItem.openPrice)
-            DetailRow(label = "High Price", value = cryptoItem.highPrice)
-            DetailRow(label = "Low Price", value = cryptoItem.lowPrice)
-            DetailRow(label = "Volume", value = cryptoItem.volume)
-            DetailRow(label = "Quote Volume", value = cryptoItem.quoteVolume)
-            DetailRow(label = "Price Change", value = cryptoItem.priceChange)
-            DetailRow(label = "Price Change Percent", value = cryptoItem.priceChangePercent)
-            DetailRow(label = "Weighted Avg Price", value = cryptoItem.weightedAvgPrice)
-            DetailRow(label = "Open Time", value = cryptoItem.openTime.toString())
-            DetailRow(label = "Close Time", value = cryptoItem.closeTime.toString())
-        }
-    }
-}
-
-@Composable
-fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "$label:",
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.secondary)
-        )
     }
 }
