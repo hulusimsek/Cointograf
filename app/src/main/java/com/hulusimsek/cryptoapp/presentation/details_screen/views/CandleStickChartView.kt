@@ -80,6 +80,7 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hulusimsek.cryptoapp.R
+import com.hulusimsek.cryptoapp.presentation.details_screen.CandleStickChartEvent
 import com.hulusimsek.cryptoapp.presentation.details_screen.CandleStickChartViewModel
 import com.hulusimsek.cryptoapp.presentation.details_screen.CryptoDetailViewModel
 import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
@@ -117,34 +118,41 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
 
 
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+
     LaunchedEffect(Unit) {
-        viewModel.updateKlines(klines)
+        viewModel.onEvent(CandleStickChartEvent.UpdateKlines(klines))
     }
 
     val dragModifier = Modifier
         .pointerInput(Unit) {
             detectDragGestures { change, dragAmount ->
                 change.consume()
-                viewModel.onDrag(
-                    dragAmount = dragAmount,
-                    candleWidthPx = candleWidthPx,
-                    candleSpacingPx = candleSpacingPx,
-                    canvasWidthPx = canvasWidthPx,
-                    canvasHeightPx = canvasHeightPx
+                viewModel.onEvent(
+                    CandleStickChartEvent.OnDrag(
+                        dragAmount = dragAmount,
+                        candleWidthPx = candleWidthPx,
+                        candleSpacingPx = candleSpacingPx,
+                        canvasWidthPx = canvasWidthPx,
+                        canvasHeightPx = canvasHeightPx
+                    )
                 )
             }
         }
         .pointerInput(Unit) {
             detectTapGestures(
                 onLongPress = { offset ->
-                    viewModel.onLongPress(
-                        offset = offset,
-                        candleWidthPx = candleWidthPx,
-                        candleSpacingPx = candleSpacingPx
+                    viewModel.onEvent(
+                        CandleStickChartEvent.OnLongPress(
+                            offset = offset,
+                            candleWidthPx = candleWidthPx,
+                            candleSpacingPx = candleSpacingPx
+                        )
                     )
                 },
                 onTap = {
-                    viewModel.onTap()
+                    viewModel.onEvent(
+                        CandleStickChartEvent.OnTap
+                    )
                 }
             )
         }

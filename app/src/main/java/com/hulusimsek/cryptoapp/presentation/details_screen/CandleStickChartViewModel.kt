@@ -30,7 +30,13 @@ class CandleStickChartViewModel : ViewModel() {
 
     var klines by mutableStateOf<List<KlineModel>>(emptyList())
 
-    fun onDrag(dragAmount: Offset, candleWidthPx: Float, candleSpacingPx: Float, canvasWidthPx: Float, canvasHeightPx: Float) {
+    private fun onDrag(
+        dragAmount: Offset,
+        candleWidthPx: Float,
+        candleSpacingPx: Float,
+        canvasWidthPx: Float,
+        canvasHeightPx: Float
+    ) {
         // Aralık sınırlarını doğru hesapla
         val maxOffsetX = -((candleWidthPx + candleSpacingPx) * klines.size - canvasWidthPx)
         val maxOffsetY = -((canvasHeightPx + candleSpacingPx) * klines.size - canvasHeightPx)
@@ -45,7 +51,7 @@ class CandleStickChartViewModel : ViewModel() {
         }
     }
 
-    fun onLongPress(offset: Offset, candleWidthPx: Float, candleSpacingPx: Float) {
+    private fun onLongPress(offset: Offset, candleWidthPx: Float, candleSpacingPx: Float) {
         Log.e("guidlinetest", "test 0")
         if (klines.isEmpty()) return // Eğer klines boşsa, fonksiyondan çık
         Log.e("guidlinetest", "test 1")
@@ -53,7 +59,8 @@ class CandleStickChartViewModel : ViewModel() {
 
         if (!_isGuideLine.value) {
             val transformedX = (offset.x - offsetX)
-            val candleIndex = (transformedX / (candleWidthPx + candleSpacingPx)).toInt().coerceIn(0, klines.size - 1)
+            val candleIndex = (transformedX / (candleWidthPx + candleSpacingPx)).toInt()
+                .coerceIn(0, klines.size - 1)
             Log.e("guidlinetest", "test 2")
 
             if (candleIndex in klines.indices) {
@@ -61,21 +68,23 @@ class CandleStickChartViewModel : ViewModel() {
                 showPopup = true
                 Log.e("guidlinetest", "test 3")
 
-                val candleCenterX = candleIndex * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
+                val candleCenterX =
+                    candleIndex * (candleWidthPx + candleSpacingPx) + (candleWidthPx / 2)
                 guideLineX = candleCenterX + offsetX
                 guideLineY = offset.y
                 _isGuideLine.value = true
             }
         }
     }
-    fun onTap() {
+
+    private fun onTap() {
         showPopup = false
         guideLineX = null
         guideLineY = null
         _isGuideLine.value = false
     }
 
-    fun updateKlines(newKlines: List<KlineModel>) {
+    private fun updateKlines(newKlines: List<KlineModel>) {
         klines = newKlines
         // Adjust offsetX to fit new data
     }
@@ -87,6 +96,18 @@ class CandleStickChartViewModel : ViewModel() {
         } else {
             this.coerceIn(min, max)
         }
-    }}
+    }
+
+    fun onEvent(event: CandleStickChartEvent) {
+        when (event) {
+            is CandleStickChartEvent.OnDrag -> onDrag(event.dragAmount,event.candleWidthPx,event.candleSpacingPx,event.canvasWidthPx,event.canvasHeightPx)
+            is CandleStickChartEvent.OnLongPress -> onLongPress(event.offset, event.candleWidthPx, event.candleSpacingPx)
+            is CandleStickChartEvent.OnTap -> onTap()
+            is CandleStickChartEvent.UpdateKlines -> updateKlines(event.newKlines)
+
+
+        }
+    }
+}
 
 
