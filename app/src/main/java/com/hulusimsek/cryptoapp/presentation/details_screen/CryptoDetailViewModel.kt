@@ -3,7 +3,9 @@ package com.hulusimsek.cryptoapp.presentation.details_screen
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hulusimsek.cryptoapp.data.WebSocketClient
 import com.hulusimsek.cryptoapp.data.remote.dto.CryptoItem
+import com.hulusimsek.cryptoapp.data.remote.dto.Ticker
 import com.hulusimsek.cryptoapp.domain.use_case.get_crypto_details_use_case.GetCryptoDetailsUseCase
 import com.hulusimsek.cryptoapp.domain.use_case.get_klines_use_case.GetKlinesUseCase
 import com.hulusimsek.cryptoapp.presentation.home_screen.CryptosEvent
@@ -21,7 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CryptoDetailViewModel @Inject constructor(
     private val getCryptoDetailsUseCase: GetCryptoDetailsUseCase,
-    private val getKlinesUseCase: GetKlinesUseCase
+    private val getKlinesUseCase: GetKlinesUseCase,
+    val webSocketClient: WebSocketClient
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<CoinDetailState>(CoinDetailState())
@@ -33,6 +36,32 @@ class CryptoDetailViewModel @Inject constructor(
     private var job: Job? = null
     private var job2: Job? = null
 
+    private fun updateData(updates: Map<String, Ticker>) {
+
+        _state.value = _state.value.copy(coin = updates[_state.value.coin?.symbol]?.let { ticker ->
+            val priceChangePercent = ticker.priceChangePercent.toFloatOrNull() ?: 0f
+            val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
+            _state.value.coin?.copy(
+                priceChangePercent = formattedPriceChangePercent,
+                lastPrice = removeTrailingZeros(ticker.closePrice),
+                quoteVolume = ticker.totalQuoteVolume
+            )
+        })
+    }
+
+
+    fun updateSelectedSymbols(symbols: List<String>) {
+        webSocketClient.connect(symbols) // WebSocket bağlantılarını güncelle
+    }
+
+    private fun startWebSocketUpdates() {
+        viewModelScope.launch {
+            webSocketClient.priceUpdates.collect { updates ->
+                updateData(updates)  // Tab verilerini güncelle
+            }
+        }
+    }
+
 
     private fun selectTimeRange(timeRange: String) {
         _interval.value = timeRange
@@ -43,7 +72,7 @@ class CryptoDetailViewModel @Inject constructor(
         val cryptoSymbol = _state.value.currentCrypto
         if (cryptoSymbol != null) {
             loadCryptoDetails(cryptoSymbol)
-            if(_state.value.error.isNullOrEmpty() && _state.value.isLoading){
+            if (_state.value.error.isNullOrEmpty() && _state.value.isLoading) {
                 _state.value.copy(
                     toastMessage = "Veriler güncellendi.",
                 )
@@ -70,10 +99,12 @@ class CryptoDetailViewModel @Inject constructor(
                         currentCrypto = cryptoSymbol
                     )
                     fetchKlinesData()
+                    startWebSocketUpdates()
                 }
 
                 is Resource.Error -> {
-                    _state.value = CoinDetailState(error = it.message ?: "Error!", toastMessage = it.message)
+                    _state.value =
+                        CoinDetailState(error = it.message ?: "Error!", toastMessage = it.message)
                 }
 
                 is Resource.Loading -> {
@@ -96,27 +127,37 @@ class CryptoDetailViewModel @Inject constructor(
         job2?.cancel()
 
 
-        job2 = getKlinesUseCase.executeGetKlines(_state.value.currentCrypto ?: "", _interval.value).onEach {
-            when (it) {
-                is Resource.Success -> {
-                    _state.value = _state.value.copy(
-                        klines = it.data,
-                        isLoading = false
-                    )
+        job2 = getKlinesUseCase.executeGetKlines(_state.value.currentCrypto ?: "", _interval.value)
+            .onEach {
+                when (it) {
+                    is Resource.Success -> {
+                        _state.value = _state.value.copy(
+                            klines = it.data,
+                            isLoading = false
+                        )
+                    }
+
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            klinesError = it.message ?: "Error!",
+                            toastMessage = it.message,
+                            isLoading = false
+                        )
+
+                    }
+
+                    is Resource.Loading -> {
+                        _state.value = _state.value.copy(isLoading = true)
+                    }
                 }
 
-                is Resource.Error -> {
-                    _state.value = _state.value.copy(klinesError = it.message ?: "Error!", toastMessage = it.message, isLoading = false)
 
-                }
+            }.launchIn(viewModelScope)
+    }
 
-                is Resource.Loading -> {
-                    _state.value = _state.value.copy(isLoading = true)
-                }
-            }
-
-
-        }.launchIn(viewModelScope)
+    override fun onCleared() {
+        super.onCleared()
+        webSocketClient.disconnect() // ViewModel temizlenirken WebSocket bağlantılarını kes
     }
 
     fun onEvent(event: CryptoDetailsEvent) {

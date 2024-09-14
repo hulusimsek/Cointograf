@@ -1,15 +1,18 @@
 package com.hulusimsek.cryptoapp.presentation.home_screen
-
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hulusimsek.cryptoapp.R
+import com.hulusimsek.cryptoapp.data.WebSocketClient
 import com.hulusimsek.cryptoapp.data.database.entity.SearchQuery
 import com.hulusimsek.cryptoapp.data.remote.dto.CryptoItem
+import com.hulusimsek.cryptoapp.data.remote.dto.Ticker
 import com.hulusimsek.cryptoapp.domain.use_case.delete_search_query_use_case.DeleteSearchQueryUseCase
 import com.hulusimsek.cryptoapp.domain.use_case.get_cryptos.GetCryptosUseCase
 import com.hulusimsek.cryptoapp.domain.use_case.load_search_queries_use_case.LoadSearchQueriesUseCase
 import com.hulusimsek.cryptoapp.domain.use_case.save_search_query_use_case.SaveSearchQueryUseCase
+import com.hulusimsek.cryptoapp.util.Constants.removeTrailingZeros
 import com.hulusimsek.cryptoapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +30,9 @@ class HomeViewModel @Inject constructor(
     private val context: Context,
     private val loadSearchQueriesUseCase: LoadSearchQueriesUseCase,
     private val saveSearchQueryUseCase: SaveSearchQueryUseCase,
-    private val deleteSearchQueryUseCase: DeleteSearchQueryUseCase
+    private val deleteSearchQueryUseCase: DeleteSearchQueryUseCase,
+    val webSocketClient: WebSocketClient // WebSocketClient'ı ekledik
+
 
 ) : ViewModel() {
 
@@ -71,10 +76,83 @@ class HomeViewModel @Inject constructor(
     private val _state = MutableStateFlow<CoinState>(CoinState())
     val state: StateFlow<CoinState> = _state
 
+    private val _selectedSymbols = MutableStateFlow<List<String>>(emptyList())
+    val selectedSymbols: StateFlow<List<String>> = _selectedSymbols
+
+    private val _searchResults = MutableStateFlow<List<CryptoItem>>(emptyList())
+    val searchResults: StateFlow<List<CryptoItem>> = _searchResults
+
 
     private var job: Job? = null
 
     fun String.toDoubleOrZero(): Double = this.toDoubleOrNull() ?: 0.0
+
+
+    private fun updateTabData(updates: Map<String, Ticker>) {
+        if(_searchQuery.value.isEmpty()) {
+            val currentTabList = when (_selectedTabIndex.value) {
+                0 -> _tab0.value
+                1 -> _tab1.value
+                2 -> _tab2.value
+                3 -> _tab3.value
+                4 -> _tab4.value
+                else -> emptyList()
+            }
+
+            val updatedList = currentTabList.map { item ->
+                updates[item.symbol]?.let { ticker ->
+                    val priceChangePercent = ticker.priceChangePercent.toFloatOrNull() ?: 0f
+                    val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
+                    item.copy(
+                        priceChangePercent = formattedPriceChangePercent,
+                        lastPrice = removeTrailingZeros(ticker.closePrice),
+                        quoteVolume = ticker.totalQuoteVolume
+                    )
+                } ?: item
+            }
+
+            // Tab'ı güncelle
+            when (_selectedTabIndex.value) {
+                0 -> _tab0.value = updatedList
+                1 -> _tab1.value = updatedList
+                2 -> _tab2.value = updatedList
+                3 -> _tab3.value = updatedList
+                4 -> _tab4.value = updatedList
+            }
+
+            Log.d("UpdateTabData", "Tab $_selectedTabIndex updated: $updatedList")
+        }
+        else {
+            val updatedList = _searchResults.value.map { item ->
+                updates[item.symbol]?.let { ticker ->
+                    val priceChangePercent = ticker.priceChangePercent.toFloatOrNull() ?: 0f
+                    val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
+                    item.copy(
+                        priceChangePercent = formattedPriceChangePercent,
+                        lastPrice = removeTrailingZeros(ticker.closePrice),
+                        quoteVolume = ticker.totalQuoteVolume
+                    )
+                } ?: item
+            }
+            _searchResults.value = updatedList
+        }
+
+    }
+
+
+    fun updateSelectedSymbols(symbols: List<String>) {
+        webSocketClient.disconnect()
+        _selectedSymbols.value = symbols
+        webSocketClient.connect(symbols) // WebSocket bağlantılarını güncelle
+    }
+    private fun startWebSocketUpdates() {
+        viewModelScope.launch {
+            webSocketClient.priceUpdates.collect { updates ->
+                updateTabData(updates)  // Tab verilerini güncelle
+            }
+        }
+    }
+
 
     private fun selectSymbol(symbol: String) {
         _selectedSymbol.value = symbol
@@ -169,6 +247,8 @@ class HomeViewModel @Inject constructor(
 
                     }
                     filterList()
+                    startWebSocketUpdates()
+
                     _toastMessage.value =
                         "Veriler başarıyla güncellendi." // Başarı durumunda mesajı ayarla
 
@@ -206,6 +286,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             _searchQuery.value = query
             if (query.isEmpty()) {
+                _searchResults.value = emptyList()
                 _state.value = CoinState(coins = initialCryptoList)
                 isSearchStarting = true
             } else {
@@ -217,10 +298,9 @@ class HomeViewModel @Inject constructor(
                 val result = initialCryptoList.filter {
                     it.symbol.contains(query.trim(), ignoreCase = true)
                 }
+                _searchResults.value = result
                 _state.value = CoinState(coins = result)
             }
-
-            // Arama sorgusunu kaydet
         }
     }
 
@@ -242,6 +322,11 @@ class HomeViewModel @Inject constructor(
             deleteSearchQueryUseCase(query)
             loadSearchQueries() // Arama sorgularını güncelle
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        webSocketClient.disconnect() // ViewModel temizlenirken WebSocket bağlantılarını kes
     }
 
 

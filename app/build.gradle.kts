@@ -139,19 +139,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
 
-    implementation("com.patrykandpatrick.vico:compose:2.0.0-alpha.28")
+    implementation("com.squareup.okhttp3:okhttp:4.9.3") // veya uygun versiyon
 
-    // For `compose`. Creates a `ChartStyle` based on an M2 Material Theme.
-    implementation("com.patrykandpatrick.vico:compose-m2:2.0.0-alpha.28")
-
-    // For `compose`. Creates a `ChartStyle` based on an M3 Material Theme.
-    implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.28")
-
-    // Houses the core logic for charts and other elements. Included in all other modules.
-    implementation("com.patrykandpatrick.vico:core:2.0.0-alpha.28")
-
-    // For the view system.
-    implementation("com.patrykandpatrick.vico:views:2.0.0-alpha.28")
 
 
 

@@ -13,6 +13,8 @@ import com.hulusimsek.cryptoapp.domain.use_case.get_crypto_details_use_case.GetC
 import com.hulusimsek.cryptoapp.domain.use_case.get_cryptos.GetCryptosUseCase
 import com.hulusimsek.cryptoapp.domain.use_case.load_search_queries_use_case.LoadSearchQueriesUseCase
 import com.hulusimsek.cryptoapp.domain.use_case.save_search_query_use_case.SaveSearchQueryUseCase
+import com.hulusimsek.cryptoapp.data.WebSocketClient // Paket adını doğru yazdığınızdan emin olun
+
 import com.hulusimsek.cryptoapp.util.Constants.BASE_URL
 import dagger.Module
 import dagger.Provides
@@ -92,5 +94,11 @@ object AppModule {
         context: Context
     ): GetCryptoDetailsUseCase {
         return GetCryptoDetailsUseCase(repository,context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWebSocketClient(): WebSocketClient {
+        return WebSocketClient()
     }
 }

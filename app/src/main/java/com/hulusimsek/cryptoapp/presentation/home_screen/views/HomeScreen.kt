@@ -2,6 +2,7 @@ package com.hulusimsek.cryptoapp.presentation.home_screen.views
 
 import PullToRefreshPage
 import android.annotation.SuppressLint
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -63,7 +64,12 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.hulusimsek.cryptoapp.data.remote.dto.CryptoItem
 import com.hulusimsek.cryptoapp.presentation.home_screen.CryptosEvent
 import com.hulusimsek.cryptoapp.presentation.theme.BlueMunsell
@@ -76,7 +82,7 @@ import kotlinx.coroutines.launch
 
 
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "UnrememberedGetBackStackEntry")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -95,6 +101,8 @@ fun HomeScreen(
     val tab4 by viewModel.tab4.collectAsStateWithLifecycle()
 
     val selectedSymbol by viewModel.selectedSymbol.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+
     val showDialog = remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(initialPage = 0, pageCount = {5})
 
@@ -102,6 +110,72 @@ fun HomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     val coroutineScope = rememberCoroutineScope()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+
+
+    LaunchedEffect(pagerState.currentPage) {
+        viewModel.onEvent(CryptosEvent.SelectTab(pagerState.currentPage))
+    }
+
+    LaunchedEffect(selectedTabIndex, searchResults.map { it.symbol }, state.isLoading) {
+        if(searchResults.isNotEmpty()) {
+            viewModel.updateSelectedSymbols(searchResults.map { it.symbol })
+        }
+        else {
+            if (!state.isLoading) {
+                val symbols = when (selectedTabIndex) {
+                    0 -> tab0.map { it.symbol }
+                    1 -> tab1.map { it.symbol }
+                    2 -> tab2.map { it.symbol }
+                    3 -> tab3.map { it.symbol }
+                    4 -> tab4.map { it.symbol }
+                    else -> emptyList()
+                }
+
+                if (symbols.isNotEmpty()) {
+                    viewModel.updateSelectedSymbols(symbols)
+                } else {
+                    // Eğer semboller boşsa, WebSocket bağlantısını güncellemeye gerek yok
+                    viewModel.webSocketClient.disconnect()
+                }
+            }
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val symbols = when (selectedTabIndex) {
+            0 -> tab0.map { it.symbol }
+            1 -> tab1.map { it.symbol }
+            2 -> tab2.map { it.symbol }
+            3 -> tab3.map { it.symbol }
+            4 -> tab4.map { it.symbol }
+            else -> emptyList()
+        }
+
+        val observer = LifecycleEventObserver { _, event ->
+            // Eğer HomeScreen görünür durumdaysa WebSocket bağlantısını aç, değilse kapat
+            if (currentBackStackEntry?.destination?.route == "home_screen_route") {
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> viewModel.updateSelectedSymbols(symbols)
+                    Lifecycle.Event.ON_PAUSE -> viewModel.webSocketClient.disconnect()
+                    Lifecycle.Event.ON_STOP -> viewModel.webSocketClient.disconnect()
+                    else -> {}
+                }
+            } else {
+                // Eğer HomeScreen görünmüyorsa WebSocket'i kapat
+                viewModel.webSocketClient.disconnect()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
@@ -202,7 +276,7 @@ fun HomeScreen(
 
                     HomeLazyColumn(
                         navController = navController,
-                        cryptoList = state.coins,
+                        cryptoList = searchResults,
                         filterCryptoList = tabCryptoList,
                         searchQuery = searchQuery,
                         isLoading = state.isLoading,
