@@ -39,6 +39,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -112,6 +113,8 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
     val canvasWidthPx = with(density2) { 300.dp.toPx() }
     val canvasHeightPx = with(density2) { 400.dp.toPx() }
 
+    val borderColor = MaterialTheme.colorScheme.onSurface
+
     val totalCandles = klines.size
 
     val isGuideLine = viewModel.isGuideLine.collectAsState()
@@ -181,6 +184,8 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
             ) {
                 val canvasWidth = size.width
                 val canvasHeight = size.height
+
+
 
                 val totalWidth =
                     (candleWidthPx + candleSpacingPx) * totalCandles - candleSpacingPx
@@ -252,6 +257,8 @@ fun CandleStickChartView(modifier: Modifier = Modifier, klines: List<KlineModel>
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(40.dp))
 
         // 2. Bölüm: Hacim Grafiği
         Box(

@@ -61,24 +61,11 @@ fun CryptoDetailScreen(
 
     val selectedTimeRange by viewModel.interval.collectAsState()
 
-    LaunchedEffect(state.isLoading) {
-        if (!state.isLoading) {
-
-            if (id.isNotEmpty()) {
-                viewModel.updateSelectedSymbols(listOf(id))
-            } else {
-                // Eğer semboller boşsa, WebSocket bağlantısını güncellemeye gerek yok
-                viewModel.webSocketClient.disconnect()
-            }
-        }
-    }
-
     DisposableEffect(id) {
         onDispose {
             viewModel.webSocketClient.disconnect()
         }
     }
-
 
     LaunchedEffect(state.toastMessage) {
         state.toastMessage?.let {
@@ -90,6 +77,18 @@ fun CryptoDetailScreen(
 
     LaunchedEffect(id) {
         viewModel.onEvent(CryptoDetailsEvent.LoadCryptoDetails(id))
+    }
+
+    LaunchedEffect(state.isLoading) {
+        if (!state.isLoading) {
+
+            if (id.isNotEmpty()) {
+                viewModel.updateSelectedSymbols(listOf(id))
+            } else {
+                // Eğer semboller boşsa, WebSocket bağlantısını güncellemeye gerek yok
+                viewModel.webSocketClient.disconnect()
+            }
+        }
     }
 
     Surface(

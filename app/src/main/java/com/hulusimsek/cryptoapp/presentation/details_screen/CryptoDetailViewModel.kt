@@ -37,16 +37,32 @@ class CryptoDetailViewModel @Inject constructor(
     private var job2: Job? = null
 
     private fun updateData(updates: Map<String, Ticker>) {
+        val currentCoin = _state.value.coin
 
-        _state.value = _state.value.copy(coin = updates[_state.value.coin?.symbol]?.let { ticker ->
-            val priceChangePercent = ticker.priceChangePercent.toFloatOrNull() ?: 0f
-            val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
-            _state.value.coin?.copy(
-                priceChangePercent = formattedPriceChangePercent,
-                lastPrice = removeTrailingZeros(ticker.closePrice),
-                quoteVolume = ticker.totalQuoteVolume
-            )
-        })
+        // Eğer coin null ise, güncelleme yapılmayacak
+        if (currentCoin != null) {
+            val ticker = updates[currentCoin.symbol]
+
+            // Eğer updates'ten gelen ticker null değilse, güncelleme yapılıyor
+            if (ticker != null) {
+                val priceChangePercent = ticker.priceChangePercent.toFloatOrNull() ?: 0f
+                val formattedPriceChangePercent = String.format("%.2f", priceChangePercent)
+
+                _state.value = _state.value.copy(
+                    coin = currentCoin.copy(
+                        priceChangePercent = formattedPriceChangePercent,
+                        lastPrice = removeTrailingZeros(ticker.closePrice),
+                        quoteVolume = ticker.totalQuoteVolume
+                    )
+                )
+            } else {
+                // Eğer ticker null ise, loglama yapabiliriz
+                Log.e("websocket", "Ticker not found for symbol: ${currentCoin.symbol}")
+            }
+        } else {
+            // Eğer coin null ise, loglama yapabiliriz
+            Log.e("websocket", "Current coin is null in the state")
+        }
     }
 
 
